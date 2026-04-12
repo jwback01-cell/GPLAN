@@ -1,0 +1,1198 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GPLAN — 내부 운영의 모든 것, 한 곳에서</title>
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: {
+        pretendard: ['Pretendard Variable','Pretendard','-apple-system','BlinkMacSystemFont','system-ui','sans-serif'],
+      },
+      colors: {
+        brand: {
+          black:  '#1A1A1A',
+          gray:   '#8E8E93',
+          border: '#F2F2F7',
+          bg:     '#F9F9FB',
+          blue:   '#2196F3',
+          'blue-light': '#E1F0FF',
+          pink:   '#E91E63',
+          'pink-light': '#FFE1EC',
+          orange: '#FF9800',
+          'orange-light': '#FFF0E1',
+          green:  '#00C853',
+          'green-light': '#E1FFF0',
+        }
+      },
+      borderRadius: {
+        '2xl': '16px',
+        '3xl': '24px',
+        '4xl': '32px',
+      },
+      boxShadow: {
+        panel: '0 10px 40px -10px rgba(0,0,0,0.05)',
+        btn:   '0 8px 20px rgba(0,0,0,0.15)',
+      }
+    }
+  }
+}
+</script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: 'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    background: #F9F9FB;
+    color: #1A1A1A;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #E5E5EA; border-radius: 10px; }
+  ::-webkit-scrollbar-thumb:hover { background: #D1D1D6; }
+
+  /* ── Glass nav ── */
+  .glass-nav {
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid #F2F2F7;
+    box-shadow: 0 10px 40px -10px rgba(0,0,0,0.05);
+  }
+
+  /* ── Panel shadow ── */
+  .panel { box-shadow: 0 10px 40px -10px rgba(0,0,0,0.05); border: 1px solid #F2F2F7; }
+
+  /* ── Page management ── */
+  .page { display: none; height: 100vh; flex-direction: column; overflow: hidden; }
+  .page.active { display: flex; }
+
+  /* ── Login blobs ── */
+  .blob {
+    position: fixed;
+    border-radius: 50%;
+    mix-blend-mode: multiply;
+    filter: blur(80px);
+    opacity: 0.4;
+    pointer-events: none;
+    animation: drift 12s ease-in-out infinite alternate;
+  }
+  @keyframes drift {
+    from { transform: translate(0,0) scale(1); }
+    to   { transform: translate(30px,20px) scale(1.05); }
+  }
+
+  /* ── Tab indicator ── */
+  .tab-btn { position: relative; color: #8E8E93; padding-bottom: 12px; font-size: 14px; font-weight: 600; cursor: pointer; transition: color .2s; }
+  .tab-btn.active { color: #1A1A1A; }
+  .tab-btn.active::after { content:''; position:absolute; bottom:-1px; left:0; right:0; height:2px; background:#1A1A1A; border-radius:2px; }
+
+  /* ── Pill chart ── */
+  .pill {
+    flex: 1;
+    border-radius: 6px;
+    background: #E1F0FF;
+    min-height: 4px;
+    transition: height 1s ease-out;
+    position: relative;
+    cursor: pointer;
+  }
+  .pill:hover { background: #BFE0FF; }
+  .pill.active { background: #1A1A1A; }
+  .pill.active:hover { background: #333; }
+
+  /* ── Donut chart ── */
+  .donut-segment { transition: stroke-dasharray 1s ease-out; }
+
+  /* ── Toggle switch ── */
+  .toggle-track { width: 40px; height: 20px; border-radius: 999px; position: relative; padding: 2px; cursor: pointer; transition: background .2s; }
+  .toggle-track.on  { background: #1A1A1A; }
+  .toggle-track.off { background: #E5E5EA; }
+  .toggle-thumb { width: 16px; height: 16px; background: white; border-radius: 50%; transition: transform .2s; }
+  .toggle-track.on  .toggle-thumb { transform: translateX(20px); }
+  .toggle-track.off .toggle-thumb { transform: translateX(0); }
+
+  /* ── Input stock ── */
+  .input-stock {
+    background: #F9F9FB;
+    border: 1px solid #F2F2F7;
+    border-radius: 8px;
+    padding: 8px 12px;
+    width: 88px;
+    text-align: right;
+    font-weight: 600;
+    font-size: 14px;
+    font-family: inherit;
+    transition: all .2s;
+  }
+  .input-stock:focus { outline: none; border-color: #1A1A1A; background: #fff; }
+  .input-stock.warn { border-color: #E91E63; color: #E91E63; }
+
+  /* ── Confetti ── */
+  .confetti-piece {
+    position: fixed;
+    width: 8px; height: 8px;
+    border-radius: 2px;
+    pointer-events: none;
+    animation: confettiFall 1s ease-out forwards;
+    z-index: 9999;
+  }
+  @keyframes confettiFall {
+    0%   { opacity:1; transform: translate(0,0) rotate(0deg); }
+    100% { opacity:0; transform: translate(var(--tx),var(--ty)) rotate(360deg); }
+  }
+
+  /* ── Fade in ── */
+  @keyframes fadeInUp {
+    from { opacity:0; transform: translateY(12px); }
+    to   { opacity:1; transform: translateY(0); }
+  }
+  .fade-in { animation: fadeInUp .35s ease-out forwards; }
+
+  /* ── Slide-out ── */
+  @keyframes slideOut {
+    to { opacity:0; transform: translateX(20px); }
+  }
+  .slide-out { animation: slideOut .3s ease-out forwards; }
+
+  /* ── Tooltip ── */
+  .tooltip-wrap { position:relative; display:inline-block; }
+  .tooltip-box {
+    visibility: hidden; opacity: 0;
+    position: absolute; bottom: 130%; left: 50%; transform: translateX(-50%);
+    background: #333; color: #fff; font-size: 12px; font-weight: 500;
+    padding: 8px 12px; border-radius: 8px; white-space: nowrap;
+    transition: opacity .25s; pointer-events: none; z-index: 50;
+    line-height: 1.5; text-align: center; min-width: 220px;
+  }
+  .tooltip-wrap:hover .tooltip-box { visibility:visible; opacity:1; }
+
+  /* ── Responsive sidebar ── */
+  @media (max-width: 768px) {
+    .sidebar { display: none !important; }
+    .sidebar.open { display: flex !important; position: fixed; top:0; left:0; z-index:40; height:100%; width:260px; }
+    .hamburger { display: flex !important; }
+    .layout-gap { gap: 0 !important; padding-left: 16px !important; padding-right: 16px !important; }
+  }
+  .hamburger { display: none; }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     PAGE: LOGIN
+══════════════════════════════════════════ -->
+<div id="page-login" class="page active" style="background:#F9F9FB; position:relative;">
+  <div class="blob" style="width:500px;height:500px;background:#E1F0FF;top:5%;left:10%;animation-duration:14s;"></div>
+  <div class="blob" style="width:400px;height:400px;background:#FFE1EC;bottom:5%;right:10%;animation-duration:10s;animation-direction:alternate-reverse;"></div>
+  <div class="blob" style="width:300px;height:300px;background:#FFF0E1;top:45%;left:45%;animation-duration:16s;"></div>
+
+  <div class="flex-1 flex items-center justify-center p-6 relative z-10">
+    <div class="w-full max-w-[480px] bg-white rounded-4xl panel p-10 md:p-12 fade-in">
+
+      <!-- Brand -->
+      <div class="flex justify-center items-center gap-2.5 font-black text-[1.2rem] tracking-tight mb-10">
+        <div class="w-4 h-4 bg-brand-black rounded-[4px]"></div>
+        GPLAN
+      </div>
+
+      <!-- Headline -->
+      <div class="text-center mb-10">
+        <h1 class="text-[2.1rem] font-bold tracking-tight mb-3 leading-tight">LOGIN 👋</h1>
+        <p class="text-brand-gray text-[1.05rem] leading-relaxed">계정에 로그인하여<br>오늘의 운영 현황을 확인하세요.</p>
+      </div>
+
+      <!-- Form -->
+      <div class="flex flex-col gap-5">
+        <div class="flex flex-col gap-2">
+          <label class="text-sm font-bold ml-1">아이디</label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-brand-gray">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            </div>
+            <input id="login-id" type="text" placeholder="아이디를 입력해주세요" class="w-full pl-11 pr-4 py-3.5 bg-brand-bg border border-brand-border rounded-2xl text-[15px] placeholder-brand-gray font-medium focus:outline-none focus:border-brand-blue focus:bg-white focus:ring-4 focus:ring-brand-blue-light/50 transition-all">
+          </div>
+        </div>
+
+        <div class="flex flex-col gap-2">
+          <label class="text-sm font-bold ml-1">비밀번호</label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-brand-gray">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </div>
+            <input id="login-pw" type="password" placeholder="비밀번호를 입력해주세요" class="w-full pl-11 pr-12 py-3.5 bg-brand-bg border border-brand-border rounded-2xl text-[15px] placeholder-brand-gray font-medium focus:outline-none focus:border-brand-blue focus:bg-white focus:ring-4 focus:ring-brand-blue-light/50 transition-all">
+            <button type="button" id="pw-toggle" class="absolute inset-y-0 right-0 pr-4 flex items-center text-brand-gray hover:text-brand-black transition-colors">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Error -->
+        <div id="login-error" class="hidden bg-brand-pink-light/60 border border-brand-pink-light rounded-xl p-3.5 flex items-start gap-2.5 text-brand-pink fade-in">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="mt-0.5 shrink-0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span class="text-[0.9rem] font-semibold">아이디 또는 비밀번호를 확인해주세요.</span>
+        </div>
+
+        <!-- Options -->
+        <div class="flex items-center justify-between mt-2 mb-4">
+          <label class="flex items-center gap-2.5 cursor-pointer group">
+            <div class="w-5 h-5 rounded-[6px] border-2 border-[#E5E5EA] bg-brand-bg group-hover:border-brand-black flex items-center justify-center transition-colors" id="remember-box">
+              <svg id="remember-check" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="hidden"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <span class="text-brand-gray text-[0.9rem] font-medium group-hover:text-brand-black transition-colors">로그인 상태 유지</span>
+          </label>
+          <a href="#" class="text-brand-gray text-[0.9rem] font-medium hover:text-brand-black hover:underline underline-offset-4 transition-all">비밀번호 찾기</a>
+        </div>
+
+        <!-- Submit -->
+        <button id="login-btn" class="w-full bg-brand-black text-white py-4 rounded-full text-[1.05rem] font-bold hover:bg-[#333] hover:-translate-y-0.5 transition-all shadow-btn flex items-center justify-center gap-2">
+          로그인
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </button>
+      </div>
+
+      <div class="mt-8 pt-8 border-t border-brand-border text-center">
+        <p class="text-brand-gray text-[0.9rem]">도움이 필요하신가요? <a href="#" class="font-bold text-brand-black hover:underline">고객센터 문의</a></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SHARED LAYOUT WRAPPER (pages 2-6)
+══════════════════════════════════════════ -->
+<!-- DASHBOARD PAGE -->
+<div id="page-dashboard" class="page">
+  <!-- NAV -->
+  <header class="w-full px-4 md:px-6 pt-5 pb-3 z-50 shrink-0">
+    <nav class="glass-nav rounded-full px-4 md:px-6 py-3.5 flex justify-between items-center max-w-[1600px] mx-auto w-full">
+      <div class="flex items-center gap-3">
+        <button class="hamburger p-2 rounded-lg hover:bg-brand-bg transition-colors" onclick="toggleSidebar()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <div class="flex items-center gap-2 font-black text-[1.15rem] tracking-tight cursor-pointer" onclick="navigate('dashboard')">
+          <div class="w-3 h-3 bg-brand-black rounded-[3px]"></div>
+          GPALN
+        </div>
+      </div>
+      <div class="flex items-center gap-4 md:gap-6">
+        <div class="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity">
+          <div class="w-9 h-9 rounded-full bg-brand-blue-light flex items-center justify-center text-brand-blue font-bold text-sm">M</div>
+          <span class="font-semibold text-sm hidden md:block">마스터 계정</span>
+        </div>
+        <div class="h-5 w-px bg-brand-border hidden md:block"></div>
+        <button class="text-brand-gray hover:text-brand-black flex items-center gap-1.5 text-sm font-semibold transition-colors" onclick="navigate('login')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+          <span class="hidden md:block">로그아웃</span>
+        </button>
+      </div>
+    </nav>
+  </header>
+
+  <div class="flex-1 flex gap-6 layout-gap px-4 md:px-6 pb-6 max-w-[1600px] mx-auto w-full overflow-hidden mt-2">
+    <!-- SIDEBAR (shared) -->
+    <aside id="sidebar-dashboard" class="sidebar w-[260px] shrink-0 bg-white rounded-4xl panel p-6 flex flex-col h-full overflow-y-auto">
+      <div class="text-xs font-bold text-brand-gray tracking-wider mb-4 px-2">MENU</div>
+      <nav class="flex flex-col gap-2" id="sidenav-dashboard">
+        <a href="#" data-page="dashboard" class="nav-item flex items-center gap-3.5 px-4 py-3.5 rounded-full font-medium text-[15px] transition-colors">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
+          대시보드
+        </a>
+        <a href="#" data-page="todo" class="nav-item flex items-center gap-3.5 px-4 py-3.5 rounded-full font-medium text-[15px] transition-colors">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/></svg>
+          할 일 목록
+        </a>
+        <a href="#" data-page="ledger" class="nav-item flex items-center gap-3.5 px-4 py-3.5 rounded-full font-medium text-[15px] transition-colors">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+          매출 장부
+        </a>
+        <a href="#" data-page="products" class="nav-item flex items-center gap-3.5 px-4 py-3.5 rounded-full font-medium text-[15px] transition-colors">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="16.5" x2="7.5" y1="9.4" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" x2="12" y1="22.08" y2="12"/></svg>
+          상품 관리
+        </a>
+        <a href="#" data-page="accounts" class="nav-item flex items-center gap-3.5 px-4 py-3.5 rounded-full font-medium text-[15px] transition-colors">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          계정 보관함
+        </a>
+      </nav>
+      <div class="mt-auto pt-6 border-t border-brand-border">
+        <div class="bg-brand-bg rounded-[20px] p-4 text-sm">
+          <div class="font-bold mb-1">도움이 필요하신가요?</div>
+          <div class="text-brand-gray mb-3 text-xs leading-relaxed">매니저가 1:1로 문제를 해결해 드립니다.</div>
+          <button class="w-full bg-white border border-brand-border rounded-full py-2 font-semibold hover:bg-gray-50 transition-colors text-sm">고객센터 문의</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN: DASHBOARD -->
+    <main class="flex-1 overflow-y-auto pr-0 md:pr-2 pb-10 flex flex-col gap-8">
+      <section class="mt-2 pl-1 md:pl-2">
+        <h1 class="text-[1.8rem] md:text-[2.25rem] font-bold tracking-tight mb-2">대시보드 👋</h1>
+        <p class="text-brand-gray text-base md:text-[1.1rem]">오늘도 원활한 쇼핑몰 운영을 위해 핵심 지표를 요약해 드릴게요.</p>
+      </section>
+
+      <!-- KPI cards -->
+      <section class="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6">
+        <div class="bg-white p-5 md:p-7 rounded-3xl panel hover:-translate-y-1 transition-transform duration-300 cursor-pointer">
+          <div class="flex items-center gap-3 md:gap-4 mb-5 md:mb-6">
+            <div class="w-12 h-12 rounded-[14px] flex items-center justify-center bg-brand-pink-light shrink-0">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#E91E63" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+            </div>
+            <span class="font-semibold text-[1.1rem]">신규 주문</span>
+          </div>
+          <div class="flex items-end justify-between">
+            <div class="text-[1.8rem] md:text-[2rem] font-bold tracking-tight">1,240<span class="text-xl font-medium text-brand-gray ml-1">건</span></div>
+            <div class="text-brand-pink font-semibold text-sm bg-brand-pink-light/60 px-2.5 py-1 rounded-lg flex items-center gap-1">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m18 15-6-6-6 6"/></svg>12.4%
+            </div>
+          </div>
+        </div>
+        <div class="bg-white p-5 md:p-7 rounded-3xl panel hover:-translate-y-1 transition-transform duration-300 cursor-pointer">
+          <div class="flex items-center gap-3 md:gap-4 mb-5 md:mb-6">
+            <div class="w-12 h-12 rounded-[14px] flex items-center justify-center bg-brand-blue-light shrink-0">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2196F3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+            </div>
+            <span class="font-semibold text-[1.1rem]">총 매출</span>
+          </div>
+          <div class="flex items-end justify-between">
+            <div class="text-[1.8rem] md:text-[2rem] font-bold tracking-tight">₩42M</div>
+            <div class="text-brand-blue font-semibold text-sm bg-brand-blue-light/60 px-2.5 py-1 rounded-lg">목표 대비 98%</div>
+          </div>
+        </div>
+        <div class="bg-white p-5 md:p-7 rounded-3xl panel hover:-translate-y-1 transition-transform duration-300 cursor-pointer">
+          <div class="flex items-center gap-3 md:gap-4 mb-5 md:mb-6">
+            <div class="w-12 h-12 rounded-[14px] flex items-center justify-center bg-brand-orange-light shrink-0">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FF9800" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
+            </div>
+            <span class="font-semibold text-[1.1rem]">재고 부족 상품</span>
+          </div>
+          <div class="flex items-end justify-between">
+            <div class="text-[1.8rem] md:text-[2rem] font-bold tracking-tight text-brand-orange">5<span class="text-xl font-medium text-brand-gray ml-1 text-brand-black">개</span></div>
+            <div class="text-brand-orange font-semibold text-sm bg-brand-orange-light/60 px-2.5 py-1 rounded-lg flex items-center gap-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-brand-orange animate-pulse inline-block"></span>발주 필요
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Todo + Chart -->
+      <section class="grid grid-cols-1 xl:grid-cols-[1.2fr_0.8fr] gap-6">
+        <!-- Todo mini -->
+        <div class="bg-white p-6 md:p-8 rounded-4xl panel flex flex-col" style="min-height:400px;">
+          <div class="flex justify-between items-center mb-6 shrink-0">
+            <div class="flex items-center gap-3">
+              <div class="w-2 h-6 bg-brand-black rounded-full"></div>
+              <h2 class="text-[1.2rem] md:text-[1.35rem] font-bold">업무 할 일 목록</h2>
+            </div>
+            <button onclick="navigate('todo')" class="bg-brand-black text-white px-4 md:px-5 py-2.5 rounded-full text-sm font-semibold hover:-translate-y-0.5 transition-transform shadow-btn flex items-center gap-2">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
+              업무 추가
+            </button>
+          </div>
+          <div class="flex flex-col gap-3 overflow-y-auto pr-1">
+            <div class="flex items-center justify-between p-4 border border-brand-border rounded-2xl hover:bg-brand-bg transition-colors group cursor-default">
+              <div class="flex items-center gap-4 min-w-0">
+                <div class="w-6 h-6 rounded-full border-2 border-brand-blue-light flex items-center justify-center cursor-pointer bg-white group-hover:border-brand-blue transition-colors shrink-0"></div>
+                <div class="min-w-0">
+                  <div class="font-bold text-[0.95rem] mb-0.5 group-hover:text-brand-blue transition-colors truncate">봄 시즌 신상품 상세페이지 업로드</div>
+                  <div class="text-brand-gray text-[0.82rem] font-medium flex items-center gap-2 flex-wrap">
+                    <span class="bg-brand-border px-2 py-0.5 rounded text-xs text-brand-black">디자인팀</span>
+                    <span>오늘 18:00 마감</span>
+                  </div>
+                </div>
+              </div>
+              <button class="ml-3 shrink-0 px-3 md:px-4 py-1.5 md:py-2 bg-white border border-brand-border rounded-full text-[0.82rem] font-semibold hover:bg-gray-50 transition-all text-brand-gray hover:text-brand-black whitespace-nowrap">완료 처리</button>
+            </div>
+            <div class="flex items-center justify-between p-4 border border-brand-border rounded-2xl hover:bg-brand-bg transition-colors group cursor-default">
+              <div class="flex items-center gap-4 min-w-0">
+                <div class="w-6 h-6 rounded-full border-2 border-brand-blue-light flex items-center justify-center cursor-pointer bg-white group-hover:border-brand-pink transition-colors shrink-0"></div>
+                <div class="min-w-0">
+                  <div class="font-bold text-[0.95rem] mb-0.5 group-hover:text-brand-pink transition-colors truncate">A/S 불량 건 환불 승인 프로세스</div>
+                  <div class="text-brand-gray text-[0.82rem] font-medium flex items-center gap-2 flex-wrap">
+                    <span class="bg-brand-pink-light px-2 py-0.5 rounded text-xs text-brand-pink">CS팀</span>
+                    <span class="text-brand-pink">기한 지남</span>
+                  </div>
+                </div>
+              </div>
+              <button class="ml-3 shrink-0 px-3 md:px-4 py-1.5 md:py-2 bg-white border border-brand-border rounded-full text-[0.82rem] font-semibold hover:bg-gray-50 transition-all text-brand-gray hover:text-brand-black whitespace-nowrap">완료 처리</button>
+            </div>
+            <div class="flex items-center justify-between p-4 border border-brand-border rounded-2xl hover:bg-brand-bg transition-colors group cursor-default opacity-60">
+              <div class="flex items-center gap-4 min-w-0">
+                <div class="w-6 h-6 rounded-full border-2 border-brand-black bg-brand-black flex items-center justify-center cursor-pointer shrink-0">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>
+                <div class="min-w-0">
+                  <div class="font-bold text-[0.95rem] mb-0.5 line-through text-brand-gray truncate">겨울 재고 창고 이동 기획안</div>
+                  <div class="text-brand-gray text-[0.82rem] font-medium">완료됨 • 오늘 09:30</div>
+                </div>
+              </div>
+              <span class="ml-3 shrink-0 px-3 md:px-4 py-1.5 md:py-2 bg-brand-bg rounded-full text-[0.82rem] font-semibold text-brand-gray whitespace-nowrap">처리 완료</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bar chart -->
+        <div class="bg-white p-6 md:p-8 rounded-4xl panel flex flex-col" style="min-height:400px;">
+          <div class="text-brand-gray text-[0.78rem] font-bold mb-2 tracking-widest uppercase">Operations Dashboard</div>
+          <h2 class="text-[1.2rem] md:text-[1.35rem] font-bold mb-6 md:mb-8 flex items-center justify-between">
+            주간 실적 요약
+            <button class="w-8 h-8 rounded-full hover:bg-brand-border flex items-center justify-center transition-colors">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8E8E93" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+            </button>
+          </h2>
+          <div class="flex-1 flex flex-col justify-end relative">
+            <div class="absolute inset-0 flex flex-col justify-between pointer-events-none pb-7">
+              <div class="border-t border-brand-border w-full flex-1"></div>
+              <div class="border-t border-brand-border w-full flex-1"></div>
+              <div class="border-t border-brand-border w-full flex-1"></div>
+              <div class="border-t border-brand-border w-full flex-1"></div>
+            </div>
+            <div class="flex items-end gap-2 md:gap-3 border-b border-brand-border pb-3 h-[200px] md:h-[240px] z-10 relative" id="bar-chart">
+              <div class="pill group" style="height:0%" data-h="30"><div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-brand-black text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-20">₩12M</div></div>
+              <div class="pill group" style="height:0%" data-h="45"><div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-brand-black text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-20">₩18M</div></div>
+              <div class="pill group" style="height:0%" data-h="25"><div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-brand-black text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-20">₩10M</div></div>
+              <div class="pill group" style="height:0%" data-h="60"><div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-brand-black text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-20">₩24M</div></div>
+              <div class="pill group" style="height:0%" data-h="50"><div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-brand-black text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-20">₩20M</div></div>
+              <div class="pill active group" style="height:0%" data-h="90"><div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-brand-black text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-20">₩36M</div></div>
+              <div class="pill group" style="height:0%" data-h="40"><div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-brand-black text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-20">₩16M</div></div>
+            </div>
+            <div class="flex justify-between text-brand-gray text-[0.82rem] font-medium mt-3 px-1">
+              <span class="flex-1 text-center">월</span><span class="flex-1 text-center">화</span><span class="flex-1 text-center">수</span><span class="flex-1 text-center">목</span><span class="flex-1 text-center">금</span><span class="flex-1 text-center text-brand-black font-bold">오늘</span><span class="flex-1 text-center">일</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     PAGE: TODO
+══════════════════════════════════════════ -->
+<div id="page-todo" class="page">
+  <header class="w-full px-4 md:px-6 pt-5 pb-3 z-50 shrink-0">
+    <nav class="glass-nav rounded-full px-4 md:px-6 py-3.5 flex justify-between items-center max-w-[1600px] mx-auto w-full">
+      <div class="flex items-center gap-3">
+        <button class="hamburger p-2 rounded-lg hover:bg-brand-bg transition-colors" onclick="toggleSidebar()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <div class="flex items-center gap-2 font-black text-[1.15rem] tracking-tight cursor-pointer" onclick="navigate('dashboard')">
+          <div class="w-3 h-3 bg-brand-black rounded-[3px]"></div>
+          GPLAN
+        </div>
+      </div>
+      <div class="flex items-center gap-4 md:gap-6">
+        <div class="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity">
+          <div class="w-9 h-9 rounded-full bg-brand-blue-light flex items-center justify-center text-brand-blue font-bold text-sm">M</div>
+          <span class="font-semibold text-sm hidden md:block">마스터 계정</span>
+        </div>
+        <button class="text-brand-gray hover:text-brand-black flex items-center gap-1.5 text-sm font-semibold transition-colors" onclick="navigate('login')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+          <span class="hidden md:block">로그아웃</span>
+        </button>
+      </div>
+    </nav>
+  </header>
+  <div class="flex-1 flex gap-6 layout-gap px-4 md:px-6 pb-6 max-w-[1600px] mx-auto w-full overflow-hidden mt-2">
+    <aside id="sidebar-todo" class="sidebar w-[260px] shrink-0 bg-white rounded-4xl panel p-6 flex flex-col h-full overflow-y-auto">
+      <div class="text-xs font-bold text-brand-gray tracking-wider mb-4 px-2">MENU</div>
+      <nav class="flex flex-col gap-2" id="sidenav-todo">
+        <a href="#" data-page="dashboard" class="nav-item flex items-center gap-3.5 px-4 py-3.5 rounded-full font-medium text-[15px] transition-colors"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>대시보드</a>
+        <a href="#" data-page="todo" class="nav-item flex items-center gap-3.5 px-4 py-3.5 rounded-full font-medium text-[15px] transition-colors"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/></svg>할 일 목록</a>
+        <a href="#" data-page="ledger" class="nav-item flex items-center gap-3.5 px-4 py-3.5 rounded-full font-medium text-[15px] transition-colors"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>매출 장부</a>
+        <a href="#" data-page="products" class="nav-item flex items-center gap-3.5 px-4 py-3.5 rounded-full font-medium text-[15px] transition-colors"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="16.5" x2="7.5" y1="9.4" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" x2="12" y1="22.08" y2="12"/></svg>상품 관리</a>
+        <a href="#" data-page="accounts" class="nav-item flex items-center gap-3.5 px-4 py-3.5 rounded-full font-medium text-[15px] transition-colors"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>계정 보관함</a>
+      </nav>
+      <div class="mt-auto pt-6 border-t border-brand-border">
+        <div class="bg-brand-bg rounded-[20px] p-4 text-sm">
+          <div class="font-bold mb-1">도움이 필요하신가요?</div>
+          <div class="text-brand-gray mb-3 text-xs leading-relaxed">매니저가 1:1로 문제를 해결해 드립니다.</div>
+          <button class="w-full bg-white border border-brand-border rounded-full py-2 font-semibold hover:bg-gray-50 transition-colors text-sm">고객센터 문의</button>
+        </div>
+      </div>
+    </aside>
+
+    <main class="flex-1 overflow-y-auto pr-0 md:pr-2 pb-10 flex flex-col gap-6">
+      <section class="flex flex-col md:flex-row justify-between items-start md:items-end mt-2 px-1 md:px-2 gap-4">
+        <div>
+          <h1 class="text-[1.8rem] md:text-[2rem] font-bold tracking-tight mb-2">할 일 목록 📋</h1>
+          <p class="text-brand-gray text-base md:text-[1.1rem]">오늘 처리해야 할 <span class="text-brand-black font-bold" id="todo-count">4개</span>의 업무가 남아있습니다.</p>
+        </div>
+        <button onclick="addTodo()" class="bg-brand-black text-white px-5 md:px-6 py-3 rounded-full text-[0.95rem] md:text-[1rem] font-bold hover:-translate-y-1 transition-transform shadow-lg flex items-center gap-2 whitespace-nowrap">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
+          업무 추가
+        </button>
+      </section>
+
+      <div class="bg-white rounded-4xl panel p-6 md:p-8 flex flex-col" style="min-height:420px;">
+        <div class="flex flex-col gap-3 md:gap-4" id="todo-list">
+          <div class="todo-row flex items-center justify-between p-4 md:p-5 border border-brand-border rounded-[24px] hover:bg-brand-bg transition-all group" data-team="디자인팀" data-due="오늘 18:00 마감" data-accent="blue">
+            <div class="flex items-center gap-4 md:gap-5 min-w-0">
+              <div class="w-6 md:w-7 h-6 md:h-7 rounded-full border-2 border-brand-blue-light flex items-center justify-center cursor-pointer bg-white group-hover:border-brand-blue transition-colors shrink-0" onclick="completeTodo(this, event)"></div>
+              <div class="min-w-0">
+                <div class="font-bold text-[1rem] md:text-[1.1rem] mb-1 group-hover:text-brand-blue transition-colors">봄 시즌 신상품 상세페이지 업로드</div>
+                <div class="flex items-center gap-2 md:gap-3 flex-wrap">
+                  <span class="bg-brand-border px-2.5 py-1 rounded-lg text-xs font-bold text-brand-black">디자인팀</span>
+                  <span class="text-brand-gray text-sm font-medium">오늘 18:00 마감</span>
+                </div>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 md:gap-3 shrink-0 ml-3">
+              <button class="delete-btn opacity-0 px-3 py-2 text-brand-gray hover:text-brand-pink text-sm font-semibold transition-all" onclick="deleteTodo(this)">삭제</button>
+              <button class="px-4 md:px-5 py-2 md:py-2.5 bg-white border border-brand-border rounded-full text-sm font-bold hover:bg-brand-black hover:text-white transition-all shadow-sm whitespace-nowrap" onclick="completeTodo(this, event)">완료 처리</button>
+            </div>
+          </div>
+          <div class="todo-row flex items-center justify-between p-4 md:p-5 border border-brand-border rounded-[24px] hover:bg-brand-bg transition-all group" data-team="CS팀" data-due="기한 지남 (오전 11:00)" data-accent="pink">
+            <div class="flex items-center gap-4 md:gap-5 min-w-0">
+              <div class="w-6 md:w-7 h-6 md:h-7 rounded-full border-2 border-brand-pink-light flex items-center justify-center cursor-pointer bg-white group-hover:border-brand-pink transition-colors shrink-0" onclick="completeTodo(this, event)"></div>
+              <div class="min-w-0">
+                <div class="font-bold text-[1rem] md:text-[1.1rem] mb-1 group-hover:text-brand-pink transition-colors">A/S 불량 건 환불 승인 프로세스</div>
+                <div class="flex items-center gap-2 md:gap-3 flex-wrap">
+                  <span class="bg-brand-pink-light px-2.5 py-1 rounded-lg text-xs font-bold text-brand-pink">CS팀</span>
+                  <span class="text-brand-pink text-sm font-bold">기한 지남 (오전 11:00)</span>
+                </div>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 md:gap-3 shrink-0 ml-3">
+              <button class="delete-btn opacity-0 px-3 py-2 text-brand-gray hover:text-brand-pink text-sm font-semibold transition-all" onclick="deleteTodo(this)">삭제</button>
+              <button class="px-4 md:px-5 py-2 md:py-2.5 bg-white border border-brand-border rounded-full text-sm font-bold hover:bg-brand-black hover:text-white transition-all shadow-sm whitespace-nowrap" onclick="completeTodo(this, event)">완료 처리</button>
+            </div>
+          </div>
+          <div class="todo-row flex items-center justify-between p-4 md:p-5 border border-brand-border rounded-[24px] hover:bg-brand-bg transition-all group" data-team="경영지원팀" data-due="내일 14:00 마감" data-accent="blue">
+            <div class="flex items-center gap-4 md:gap-5 min-w-0">
+              <div class="w-6 md:w-7 h-6 md:h-7 rounded-full border-2 border-brand-blue-light flex items-center justify-center cursor-pointer bg-white group-hover:border-brand-blue transition-colors shrink-0" onclick="completeTodo(this, event)"></div>
+              <div class="min-w-0">
+                <div class="font-bold text-[1rem] md:text-[1.1rem] mb-1 group-hover:text-brand-blue transition-colors">주간 매출 정산 내역서 작성</div>
+                <div class="flex items-center gap-2 md:gap-3 flex-wrap">
+                  <span class="bg-brand-blue-light px-2.5 py-1 rounded-lg text-xs font-bold text-brand-blue">경영지원팀</span>
+                  <span class="text-brand-gray text-sm font-medium">내일 14:00 마감</span>
+                </div>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 md:gap-3 shrink-0 ml-3">
+              <button class="delete-btn opacity-0 px-3 py-2 text-brand-gray hover:text-brand-pink text-sm font-semibold transition-all" onclick="deleteTodo(this)">삭제</button>
+              <button class="px-4 md:px-5 py-2 md:py-2.5 bg-white border border-brand-border rounded-full text-sm font-bold hover:bg-brand-black hover:text-white transition-all shadow-sm whitespace-nowrap" onclick="completeTodo(this, event)">완료 처리</button>
+            </div>
+          </div>
+          <div class="todo-row flex items-center justify-between p-4 md:p-5 border border-brand-border rounded-[24px] hover:bg-brand-bg transition-all group" data-team="물류팀" data-due="오늘 23:59 마감" data-accent="orange">
+            <div class="flex items-center gap-4 md:gap-5 min-w-0">
+              <div class="w-6 md:w-7 h-6 md:h-7 rounded-full border-2 border-brand-orange-light flex items-center justify-center cursor-pointer bg-white group-hover:border-brand-orange transition-colors shrink-0" onclick="completeTodo(this, event)"></div>
+              <div class="min-w-0">
+                <div class="font-bold text-[1rem] md:text-[1.1rem] mb-1 group-hover:text-brand-orange transition-colors">창고 재고 수량 실사 리포트 제출</div>
+                <div class="flex items-center gap-2 md:gap-3 flex-wrap">
+                  <span class="bg-brand-orange-light px-2.5 py-1 rounded-lg text-xs font-bold text-brand-orange">물류팀</span>
+                  <span class="text-brand-gray text-sm font-medium">오늘 23:59 마감</span>
+                </div>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 md:gap-3 shrink-0 ml-3">
+              <button class="delete-btn opacity-0 px-3 py-2 text-brand-gray hover:text-brand-pink text-sm font-semibold transition-all" onclick="deleteTodo(this)">삭제</button>
+              <button class="px-4 md:px-5 py-2 md:py-2.5 bg-white border border-brand-border rounded-full text-sm font-bold hover:bg-brand-black hover:text-white transition-all shadow-sm whitespace-nowrap" onclick="completeTodo(this, event)">완료 처리</button>
+            </div>
+          </div>
+        </div>
+        <div id="todo-empty" class="hidden flex-1 flex flex-col items-center justify-center text-center p-10">
+          <div class="w-32 md:w-40 h-32 md:h-40 mb-6 flex items-center justify-center bg-brand-bg rounded-full">
+            <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#2196F3" stroke-width="1.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          </div>
+          <h3 class="text-xl md:text-2xl font-bold mb-3">모든 업무 완료! ✨</h3>
+          <p class="text-brand-gray text-base md:text-lg max-w-sm leading-relaxed">모든 업무 완료! 오늘도 수고하셨습니다.</p>
+          <button class="mt-8 px-8 py-3 bg-brand-black text-white rounded-full font-bold hover:scale-105 transition-transform" onclick="location.reload()">업무 추가</button>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     PAGE: LEDGER
+══════════════════════════════════════════ -->
+<div id="page-ledger" class="page">
+  <header class="w-full px-4 md:px-6 pt-5 pb-3 z-50 shrink-0">
+    <nav class="glass-nav rounded-full px-4 md:px-6 py-3.5 flex justify-between items-center max-w-[1600px] mx-auto w-full">
+      <div class="flex items-center gap-3">
+        <button class="hamburger p-2 rounded-lg hover:bg-brand-bg" onclick="toggleSidebar()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+        <div class="flex items-center gap-2 font-black text-[1.15rem] tracking-tight cursor-pointer" onclick="navigate('dashboard')"><div class="w-3 h-3 bg-brand-black rounded-[3px]"></div>G
+      </div>
+      </div>
+      <div class="flex items-center gap-4 md:gap-6">
+        <div class="flex items-center gap-3 cursor-pointer hover:opacity-80"><div class="w-9 h-9 rounded-full bg-brand-blue-light flex items-center justify-center text-brand-blue font-bold text-sm">M</div><span class="font-semibold text-sm hidden md:block">마스터 계정</span></div>
+        <button class="text-brand-gray hover:text-brand-black flex items-center gap-1.5 text-sm font-semibold" onclick="navigate('login')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg><span class="hidden md:block">로그아웃</span></button>
+      </div>
+    </nav>
+  </header>
+  <div class="flex-1 flex gap-6 layout-gap px-4 md:px-6 pb-6 max-w-[1600px] mx-auto w-full overflow-hidden mt-2">
+    <aside id="sidebar-ledger" class="sidebar w-[260px] shrink-0 bg-white rounded-4xl panel p-6 flex flex-col h-full overflow-y-auto">
+      <div class="text-xs font-bold text-brand-gray tracking-wider mb-4 px-2">MENU</div>
+      <nav class="flex flex-col gap-2" id="sidenav-ledger">
+        <a href="#" data-page="dashboard" class="nav-item flex items-center gap-3.5 px-4 py-3.5 rounded-full font-medium text-[15px]"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>대시보드</a>
+        <a href="#" data-page="todo" class="nav-item flex items-center gap-3.5 px-4 py-3.5 rounded-full font-medium text-[15px]"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/></svg>할 일 목록</a>
+        <a href="#" data-page="ledger" class="nav-item flex items-center gap-3.5 px-4 py-3.5 rounded-full font-medium text-[15px]"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>매출 장부</a>
+        <a href="#" data-page="products" class="nav-item flex items-center gap-3.5 px-4 py-3.5 rounded-full font-medium text-[15px]"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="16.5" x2="7.5" y1="9.4" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" x2="12" y1="22.08" y2="12"/></svg>상품 관리</a>
+        <a href="#" data-page="accounts" class="nav-item flex items-center gap-3.5 px-4 py-3.5 rounded-full font-medium text-[15px]"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>계정 보관함</a>
+      </nav>
+      <div class="mt-auto pt-6 border-t border-brand-border"><div class="bg-brand-bg rounded-[20px] p-4 text-sm"><div class="font-bold mb-1">도움이 필요하신가요?</div><button class="w-full bg-white border border-brand-border rounded-full py-2 font-semibold hover:bg-gray-50 mt-2 text-sm">고객센터 문의</button></div></div>
+    </aside>
+    <main class="flex-1 overflow-y-auto pr-0 md:pr-2 pb-10 flex flex-col gap-6 md:gap-8">
+      <section class="mt-2 pl-1 md:pl-2 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+        <div>
+          <h1 class="text-[1.8rem] md:text-[2.25rem] font-bold tracking-tight mb-2">매출 장부 📊</h1>
+          <p class="text-brand-gray text-base md:text-[1.1rem]">매출·매입·수수료·택배비를 날짜별로 입력하고, 데이터를 분석하세요.</p>
+        </div>
+        <button class="bg-white border border-brand-border px-4 md:px-5 py-2.5 rounded-full text-sm font-semibold hover:bg-gray-50 transition-all flex items-center gap-2 whitespace-nowrap">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          엑셀 내보내기
+        </button>
+      </section>
+      <!-- Tabs -->
+      <div class="border-b border-brand-border flex gap-6 md:gap-8 px-1 md:px-2">
+        <button class="tab-btn active">월별 요약</button>
+        <button class="tab-btn">장부 입력</button>
+        <button class="tab-btn">매출 분석</button>
+      </div>
+      <!-- KPI -->
+      <section class="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
+        <div class="bg-white p-6 md:p-8 rounded-3xl panel">
+          <div class="flex justify-between items-center mb-5 md:mb-6">
+            <div class="flex items-center gap-3 md:gap-4">
+              <div class="w-12 h-12 rounded-[14px] flex items-center justify-center bg-brand-blue-light shrink-0">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2196F3" stroke-width="2"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+              </div>
+              <span class="font-semibold text-[1.05rem] md:text-[1.15rem]">이번 달 총 매출</span>
+            </div>
+            <span class="text-brand-gray text-sm">2024년 5월</span>
+          </div>
+          <div class="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-2">
+            <div class="text-[2rem] md:text-[2.5rem] font-bold tracking-tight">₩42,850,000</div>
+            <div class="text-brand-blue font-semibold text-sm bg-brand-blue-light/60 px-3 py-1 rounded-lg">전월 대비 +8.4%</div>
+          </div>
+        </div>
+        <div class="bg-white p-6 md:p-8 rounded-3xl panel">
+          <div class="flex justify-between items-center mb-5 md:mb-6">
+            <div class="flex items-center gap-3 md:gap-4">
+              <div class="w-12 h-12 rounded-[14px] flex items-center justify-center bg-brand-green-light shrink-0">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#00C853" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+              </div>
+              <span class="font-semibold text-[1.05rem] md:text-[1.15rem]">순이익 (영업이익)</span>
+            </div>
+            <span class="text-brand-gray text-sm">수익률 32%</span>
+          </div>
+          <div class="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-2">
+            <div class="text-[2rem] md:text-[2.5rem] font-bold tracking-tight text-brand-green">₩13,712,000</div>
+            <div class="text-brand-green font-semibold text-sm bg-brand-green-light/60 px-3 py-1 rounded-lg">목표 달성 102%</div>
+          </div>
+        </div>
+      </section>
+      <!-- Chart + Insights -->
+      <section class="grid grid-cols-1 xl:grid-cols-[1.2fr_0.8fr] gap-4 md:gap-6">
+        <div class="bg-white p-6 md:p-8 rounded-4xl panel flex flex-col" style="min-height:320px;">
+          <div class="flex justify-between items-center mb-8 md:mb-10">
+            <div class="flex items-center gap-3"><div class="w-2 h-6 bg-brand-black rounded-full"></div><h2 class="text-[1.15rem] md:text-[1.35rem] font-bold">지출 및 비용 구성비</h2></div>
+            <select class="bg-white border border-brand-border rounded-full px-3 md:px-4 py-2 text-sm font-semibold outline-none focus:border-brand-black cursor-pointer hidden md:block">
+              <option>상세 보기: 전체</option><option>변동비만</option><option>고정비만</option>
+            </select>
+          </div>
+          <div class="flex flex-col md:flex-row flex-1 items-center gap-6 md:gap-16">
+            <div class="relative w-40 md:w-56 h-40 md:h-56 shrink-0">
+              <svg viewBox="0 0 36 36" class="w-full h-full -rotate-90">
+                <circle cx="18" cy="18" r="16" fill="none" stroke="#F2F2F7" stroke-width="4"/>
+                <circle cx="18" cy="18" r="16" fill="none" stroke="#1A1A1A" stroke-width="4" stroke-dasharray="0 100" class="donut-segment" data-dash="45 100"/>
+                <circle cx="18" cy="18" r="16" fill="none" stroke="#2196F3" stroke-width="4" stroke-dasharray="0 100" stroke-dashoffset="-45" class="donut-segment" data-dash="30 100"/>
+                <circle cx="18" cy="18" r="16" fill="none" stroke="#E91E63" stroke-width="4" stroke-dasharray="0 100" stroke-dashoffset="-75" class="donut-segment" data-dash="15 100"/>
+                <circle cx="18" cy="18" r="16" fill="none" stroke="#FF9800" stroke-width="4" stroke-dasharray="0 100" stroke-dashoffset="-90" class="donut-segment" data-dash="10 100"/>
+              </svg>
+              <div class="absolute inset-0 flex flex-col items-center justify-center"><span class="text-brand-gray text-xs font-semibold">총 지출</span><span class="text-base md:text-lg font-bold">₩29M</span></div>
+            </div>
+            <div class="flex-1 grid grid-cols-1 gap-3 w-full">
+              <div class="flex items-center justify-between p-3 md:p-4 bg-brand-bg rounded-2xl"><div class="flex items-center gap-3"><div class="w-3 h-3 rounded-full bg-brand-black shrink-0"></div><span class="font-bold text-sm md:text-base">상품 매입가</span></div><div class="flex items-baseline gap-2"><span class="font-bold text-base md:text-lg">45%</span><span class="text-brand-gray text-xs md:text-sm hidden md:block">₩19,282,500</span></div></div>
+              <div class="flex items-center justify-between p-3 md:p-4 bg-brand-bg rounded-2xl"><div class="flex items-center gap-3"><div class="w-3 h-3 rounded-full bg-brand-blue shrink-0"></div><span class="font-bold text-sm md:text-base">마케팅 비용</span></div><div class="flex items-baseline gap-2"><span class="font-bold text-base md:text-lg">30%</span><span class="text-brand-gray text-xs md:text-sm hidden md:block">₩12,855,000</span></div></div>
+              <div class="flex items-center justify-between p-3 md:p-4 bg-brand-bg rounded-2xl"><div class="flex items-center gap-3"><div class="w-3 h-3 rounded-full bg-brand-pink shrink-0"></div><span class="font-bold text-sm md:text-base">물류 및 배송</span></div><div class="flex items-baseline gap-2"><span class="font-bold text-base md:text-lg">15%</span><span class="text-brand-gray text-xs md:text-sm hidden md:block">₩6,427,500</span></div></div>
+              <div class="flex items-center justify-between p-3 md:p-4 bg-brand-bg rounded-2xl"><div class="flex items-center gap-3"><div class="w-3 h-3 rounded-full bg-brand-orange shrink-0"></div><span class="font-bold text-sm md:text-base">택배비</span></div><div class="flex items-baseline gap-2"><span class="font-bold text-base md:text-lg">10%</span><span class="text-brand-gray text-xs md:text-sm hidden md:block">₩4,285,000</span></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="bg-brand-black text-white p-6 md:p-8 rounded-4xl panel flex flex-col justify-between" style="min-height:280px;">
+          <div>
+            <div class="text-[#8E8E93] text-[0.78rem] font-bold mb-2 tracking-widest uppercase">INSIGHTS</div>
+            <h2 class="text-[1.15rem] md:text-[1.35rem] font-bold mb-5 md:mb-6">기간별 매출 현황을 한눈에 파악하세요</h2>
+            <div class="space-y-4 md:space-y-6">
+              <div class="flex gap-3 md:gap-4">
+                <div class="w-9 md:w-10 h-9 md:h-10 rounded-full bg-white/10 flex items-center justify-center shrink-0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+                <div><div class="font-bold text-sm mb-1">안정적인 현금 흐름</div><div class="text-white/60 text-xs leading-relaxed">순이익, 비용 구성비, 일별 추이를 확인할 수 있습니다.</div></div>
+              </div>
+              <div class="flex gap-3 md:gap-4">
+                <div class="w-9 md:w-10 h-9 md:h-10 rounded-full bg-white/10 flex items-center justify-center shrink-0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FF9800" stroke-width="2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/></svg></div>
+                <div><div class="font-bold text-sm mb-1 text-brand-orange">광고 효율 관리 필요</div><div class="text-white/60 text-xs leading-relaxed">ROAS 수치가 250%로 소폭 하락했습니다.</div></div>
+              </div>
+            </div>
+          </div>
+          <button class="w-full bg-white text-brand-black py-3 md:py-4 rounded-2xl font-bold hover:bg-gray-100 transition-colors mt-6 text-sm md:text-base">전체 월간 리포트 다운로드 (.PDF)</button>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     PAGE: PRODUCTS
+══════════════════════════════════════════ -->
+<div id="page-products" class="page">
+  <header class="w-full px-4 md:px-6 pt-5 pb-3 z-50 shrink-0">
+    <nav class="glass-nav rounded-full px-4 md:px-6 py-3.5 flex justify-between items-center max-w-[1600px] mx-auto w-full">
+      <div class="flex items-center gap-3"><button class="hamburger p-2 rounded-lg hover:bg-brand-bg" onclick="toggleSidebar()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button><div class="flex items-center gap-2 font-black text-[1.15rem] tracking-tight cursor-pointer" onclick="navigate('dashboard')"><div class="w-3 h-3 bg-brand-black rounded-[3px]"></div>GPALNv></div>
+      <div class="flex items-center gap-4 md:gap-6"><div class="flex items-center gap-3 cursor-pointer hover:opacity-80"><div class="w-9 h-9 rounded-full bg-brand-blue-light flex items-center justify-center text-brand-blue font-bold text-sm">M</div><span class="font-semibold text-sm hidden md:block">마스터 계정</span></div><button class="text-brand-gray hover:text-brand-black flex items-center gap-1.5 text-sm font-semibold" onclick="navigate('login')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg><span class="hidden md:block">로그아웃</span></button></div>
+    </nav>
+  </header>
+  <div class="flex-1 flex gap-6 layout-gap px-4 md:px-6 pb-6 max-w-[1600px] mx-auto w-full overflow-hidden mt-2">
+    <aside id="sidebar-products" class="sidebar w-[260px] shrink-0 bg-white rounded-4xl panel p-6 flex flex-col h-full overflow-y-auto">
+      <div class="text-xs font-bold text-brand-gray tracking-wider mb-4 px-2">MENU</div>
+      <nav class="flex flex-col gap-2" id="sidenav-products">
+        <a href="#" data-page="dashboard" class="nav-item flex items-center gap-3.5 px-4 py-3.5 rounded-full font-medium text-[15px]"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>대시보드</a>
+        <a href="#" data-page="todo" class="nav-item flex items-center gap-3.5 px-4 py-3.5 rounded-full font-medium text-[15px]"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/></svg>할 일 목록</a>
+        <a href="#" data-page="ledger" class="nav-item flex items-center gap-3.5 px-4 py-3.5 rounded-full font-medium text-[15px]"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>매출 장부</a>
+        <a href="#" data-page="products" class="nav-item flex items-center gap-3.5 px-4 py-3.5 rounded-full font-medium text-[15px]"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="16.5" x2="7.5" y1="9.4" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" x2="12" y1="22.08" y2="12"/></svg>상품 관리</a>
+        <a href="#" data-page="accounts" class="nav-item flex items-center gap-3.5 px-4 py-3.5 rounded-full font-medium text-[15px]"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>계정 보관함</a>
+      </nav>
+      <div class="mt-auto pt-6 border-t border-brand-border">
+        <div class="bg-brand-bg rounded-[20px] p-4 text-sm">
+          <div class="font-bold mb-1">도움이 필요하신가요?</div>
+          <div class="text-brand-gray mb-3 text-xs leading-relaxed">매니저가 1:1로 문제를 해결해 드립니다.</div>
+          <button class="w-full bg-white border border-brand-border rounded-full py-2 font-semibold hover:bg-gray-50 text-sm">고객센터 문의</button>
+        </div>
+      </div>
+    </aside>
+    <main class="flex-1 overflow-y-auto pr-0 md:pr-2 pb-10 flex flex-col gap-5 md:gap-6">
+      <section class="mt-2 pl-1 md:pl-2 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+        <div>
+          <h1 class="text-[1.8rem] md:text-[2.25rem] font-bold tracking-tight mb-2">상품 관리 📦</h1>
+          <p class="text-brand-gray text-base md:text-[1.1rem]">재고 현황과 안전재고를 확인하고, 상품 정보를 관리하세요.</p>
+        </div>
+        <div class="flex flex-wrap gap-2 md:gap-3">
+          <button class="px-4 py-2.5 rounded-full bg-white border border-brand-border text-sm font-semibold hover:bg-brand-bg flex items-center gap-2">엑셀 가져오기</button>
+          <button class="px-4 py-2.5 rounded-full bg-white border border-brand-border text-sm font-semibold hover:bg-brand-bg flex items-center gap-2">엑셀 내보내기</button>
+          <button class="bg-brand-black text-white px-5 py-2.5 rounded-full text-sm font-semibold hover:-translate-y-0.5 transition-transform shadow-md flex items-center gap-2">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>상품 추가
+          </button>
+        </div>
+      </section>
+      <!-- Stats -->
+      <section class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+        <div class="bg-white p-4 md:p-5 rounded-3xl panel flex items-center gap-3 md:gap-4"><div class="w-10 md:w-12 h-10 md:h-12 rounded-[14px] bg-brand-border flex items-center justify-center shrink-0"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" stroke-width="2"><path d="M5 8h14M5 8a2 2 0 0 1 0-4h14a2 2 0 0 1 0 4M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8"/></svg></div><div><div class="text-brand-gray text-xs font-medium">전체 상품수</div><div class="text-lg md:text-xl font-bold">1,248개</div></div></div>
+        <div class="bg-white p-4 md:p-5 rounded-3xl panel flex items-center gap-3 md:gap-4 border-l-4 border-brand-pink"><div class="w-10 md:w-12 h-10 md:h-12 rounded-[14px] bg-brand-pink-light flex items-center justify-center shrink-0"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E91E63" stroke-width="2"><path d="M12 9v4M12 17h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg></div><div><div class="text-brand-pink text-xs font-bold">품절 임박</div><div class="text-lg md:text-xl font-bold">12개</div></div></div>
+        <div class="bg-white p-4 md:p-5 rounded-3xl panel flex items-center gap-3 md:gap-4"><div class="w-10 md:w-12 h-10 md:h-12 rounded-[14px] bg-brand-blue-light flex items-center justify-center shrink-0"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2196F3" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div><div><div class="text-brand-gray text-xs font-medium">자동 발주 활성</div><div class="text-lg md:text-xl font-bold">450개</div></div></div>
+        <div class="bg-white p-4 md:p-5 rounded-3xl panel flex items-center gap-3 md:gap-4"><div class="w-10 md:w-12 h-10 md:h-12 rounded-[14px] bg-brand-orange-light flex items-center justify-center shrink-0"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FF9800" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div><div><div class="text-brand-gray text-xs font-medium">입고 예정</div><div class="text-lg md:text-xl font-bold">3건</div></div></div>
+      </section>
+      <!-- Alert banner -->
+      <div class="bg-brand-orange-light border border-brand-orange/20 rounded-2xl p-4 flex items-start gap-3">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FF9800" stroke-width="2" class="shrink-0 mt-0.5"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
+        <div><div class="font-bold text-sm text-brand-orange">재고가 안전재고 이하로 떨어진 상품이 있습니다.</div><div class="text-brand-orange/70 text-xs mt-0.5">빠른 발주를 권장합니다.</div></div>
+      </div>
+      <!-- Table -->
+      <div class="bg-white rounded-4xl panel overflow-hidden flex flex-col flex-1">
+        <div class="p-4 md:p-6 border-b border-brand-border flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div class="relative w-full md:w-auto">
+            <input type="text" placeholder="상품명, SKU 검색..." class="pl-10 pr-4 py-2.5 bg-brand-bg rounded-full border border-transparent focus:bg-white focus:border-brand-border transition-all w-full md:w-[280px] text-sm outline-none">
+            <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 text-brand-gray" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </div>
+          <select class="px-4 py-2.5 bg-brand-bg rounded-full text-sm font-medium outline-none cursor-pointer w-full md:w-auto">
+            <option>카테고리 전체</option><option>의류</option><option>잡화</option>
+          </select>
+        </div>
+        <div class="overflow-x-auto flex-1">
+          <table class="w-full text-left border-collapse min-w-[640px]">
+            <thead class="sticky top-0 bg-white z-10 border-b border-brand-border">
+              <tr>
+                <th class="px-4 md:px-6 py-4 text-xs font-bold text-brand-gray uppercase tracking-wider">상품 정보</th>
+                <th class="px-4 md:px-6 py-4 text-xs font-bold text-brand-gray uppercase tracking-wider text-right">현재 재고</th>
+                <th class="px-4 md:px-6 py-4 text-xs font-bold text-brand-gray uppercase tracking-wider text-right">안전 재고</th>
+                <th class="px-4 md:px-6 py-4 text-xs font-bold text-brand-gray uppercase tracking-wider text-center hidden md:table-cell">자동 발주</th>
+                <th class="px-4 md:px-6 py-4 text-xs font-bold text-brand-gray uppercase tracking-wider text-center">상태</th>
+                <th class="px-4 md:px-6 py-4"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="hover:bg-brand-bg transition-colors border-b border-[#F9F9FB]">
+                <td class="px-4 md:px-6 py-4 md:py-5">
+                  <div class="flex items-center gap-3 md:gap-4">
+                    <div class="w-12 md:w-14 h-12 md:h-14 rounded-xl bg-brand-blue-light flex items-center justify-center text-brand-blue font-bold shrink-0">S1</div>
+                    <div><div class="font-bold text-sm md:text-[15px] mb-0.5">[24SS] 프리미엄 코튼 오버핏 티셔츠</div><div class="text-brand-gray text-xs font-medium">SKU: TS-24SS-WH-01 | 의류</div></div>
+                  </div>
+                </td>
+                <td class="px-4 md:px-6 py-4 md:py-5 text-right"><input type="number" value="142" class="input-stock"></td>
+                <td class="px-4 md:px-6 py-4 md:py-5 text-right"><input type="number" value="50" class="input-stock" style="border-style:dashed"></td>
+                <td class="px-4 md:px-6 py-4 md:py-5 text-center hidden md:table-cell"><div class="toggle-track on inline-flex" onclick="this.classList.toggle('on');this.classList.toggle('off')"><div class="toggle-thumb"></div></div></td>
+                <td class="px-4 md:px-6 py-4 md:py-5 text-center"><span class="px-2.5 md:px-3 py-1 rounded-full text-xs font-bold bg-brand-blue-light text-brand-blue">정상</span></td>
+                <td class="px-2 md:px-6 py-4 md:py-5 text-right"><button class="text-brand-gray hover:text-brand-black p-1 md:p-2"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg></button></td>
+              </tr>
+              <tr class="hover:bg-brand-bg transition-colors border-b border-[#F9F9FB]">
+                <td class="px-4 md:px-6 py-4 md:py-5">
+                  <div class="flex items-center gap-3 md:gap-4">
+                    <div class="w-12 md:w-14 h-12 md:h-14 rounded-xl bg-brand-pink-light flex items-center justify-center text-brand-pink font-bold shrink-0">P2</div>
+                    <div><div class="font-bold text-sm md:text-[15px] mb-0.5">데일리 캔버스 토트백 M 사이즈</div><div class="text-brand-gray text-xs font-medium">SKU: BG-CNV-BK-02 | 잡화</div></div>
+                  </div>
+                </td>
+                <td class="px-4 md:px-6 py-4 md:py-5 text-right"><input type="number" value="12" class="input-stock warn"></td>
+                <td class="px-4 md:px-6 py-4 md:py-5 text-right"><input type="number" value="30" class="input-stock" style="border-style:dashed"></td>
+                <td class="px-4 md:px-6 py-4 md:py-5 text-center hidden md:table-cell"><div class="toggle-track on inline-flex" onclick="this.classList.toggle('on');this.classList.toggle('off')"><div class="toggle-thumb"></div></div></td>
+                <td class="px-4 md:px-6 py-4 md:py-5 text-center"><span class="px-2.5 md:px-3 py-1 rounded-full text-xs font-bold bg-brand-pink-light text-brand-pink">부족 — 안전재고 이하</span></td>
+                <td class="px-2 md:px-6 py-4 md:py-5 text-right"><button class="text-brand-gray hover:text-brand-black p-1 md:p-2"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg></button></td>
+              </tr>
+              <tr class="hover:bg-brand-bg transition-colors border-b border-[#F9F9FB]">
+                <td class="px-4 md:px-6 py-4 md:py-5">
+                  <div class="flex items-center gap-3 md:gap-4">
+                    <div class="w-12 md:w-14 h-12 md:h-14 rounded-xl bg-brand-border flex items-center justify-center text-brand-gray font-bold shrink-0">H3</div>
+                    <div><div class="font-bold text-sm md:text-[15px] mb-0.5">어반 레더 벨트 다크 브라운</div><div class="text-brand-gray text-xs font-medium">SKU: BT-LTH-DB-01 | 잡화</div></div>
+                  </div>
+                </td>
+                <td class="px-4 md:px-6 py-4 md:py-5 text-right"><input type="number" value="88" class="input-stock"></td>
+                <td class="px-4 md:px-6 py-4 md:py-5 text-right"><input type="number" value="20" class="input-stock" style="border-style:dashed"></td>
+                <td class="px-4 md:px-6 py-4 md:py-5 text-center hidden md:table-cell"><div class="toggle-track off inline-flex" onclick="this.classList.toggle('on');this.classList.toggle('off')"><div class="toggle-thumb"></div></div></td>
+                <td class="px-4 md:px-6 py-4 md:py-5 text-center"><span class="px-2.5 md:px-3 py-1 rounded-full text-xs font-bold bg-brand-border text-brand-gray">정상</span></td>
+                <td class="px-2 md:px-6 py-4 md:py-5 text-right"><button class="text-brand-gray hover:text-brand-black p-1 md:p-2"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg></button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="p-4 border-t border-brand-border flex justify-center gap-2">
+          <button class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-brand-border"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg></button>
+          <button class="w-8 h-8 rounded-lg flex items-center justify-center bg-brand-black text-white font-bold text-sm">1</button>
+          <button class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-brand-border font-bold text-sm text-brand-gray">2</button>
+          <button class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-brand-border font-bold text-sm text-brand-gray">3</button>
+          <button class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-brand-border"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></button>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     PAGE: ACCOUNTS
+══════════════════════════════════════════ -->
+<div id="page-accounts" class="page">
+  <header class="w-full px-4 md:px-6 pt-5 pb-3 z-50 shrink-0">
+    <nav class="glass-nav rounded-full px-4 md:px-6 py-3.5 flex justify-between items-center max-w-[1600px] mx-auto w-full">
+      <div class="flex items-center gap-3"><button class="hamburger p-2 rounded-lg hover:bg-brand-bg" onclick="toggleSidebar()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button><div class="flex items-center gap-2 font-black text-[1.15rem] tracking-tight cursor-pointer" onclick="navigate('dashboard')"><div class="w-3 h-3 bg-brand-black rounded-[3px]"></div>GPLANv></div>
+      <div class="flex items-center gap-4 md:gap-6"><div class="flex items-center gap-3 cursor-pointer hover:opacity-80"><div class="w-9 h-9 rounded-full bg-brand-blue-light flex items-center justify-center text-brand-blue font-bold text-sm">M</div><span class="font-semibold text-sm hidden md:block">마스터 계정</span></div><button class="text-brand-gray hover:text-brand-black flex items-center gap-1.5 text-sm font-semibold" onclick="navigate('login')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg><span class="hidden md:block">로그아웃</span></button></div>
+    </nav>
+  </header>
+  <div class="flex-1 flex gap-6 layout-gap px-4 md:px-6 pb-6 max-w-[1600px] mx-auto w-full overflow-hidden mt-2">
+    <aside id="sidebar-accounts" class="sidebar w-[260px] shrink-0 bg-white rounded-4xl panel p-6 flex flex-col h-full overflow-y-auto">
+      <div class="text-xs font-bold text-brand-gray tracking-wider mb-4 px-2">MENU</div>
+      <nav class="flex flex-col gap-2" id="sidenav-accounts">
+        <a href="#" data-page="dashboard" class="nav-item flex items-center gap-3.5 px-4 py-3.5 rounded-full font-medium text-[15px]"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>대시보드</a>
+        <a href="#" data-page="todo" class="nav-item flex items-center gap-3.5 px-4 py-3.5 rounded-full font-medium text-[15px]"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/></svg>할 일 목록</a>
+        <a href="#" data-page="ledger" class="nav-item flex items-center gap-3.5 px-4 py-3.5 rounded-full font-medium text-[15px]"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>매출 장부</a>
+        <a href="#" data-page="products" class="nav-item flex items-center gap-3.5 px-4 py-3.5 rounded-full font-medium text-[15px]"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="16.5" x2="7.5" y1="9.4" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" x2="12" y1="22.08" y2="12"/></svg>상품 관리</a>
+        <a href="#" data-page="accounts" class="nav-item flex items-center gap-3.5 px-4 py-3.5 rounded-full font-medium text-[15px]"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>계정 보관함</a>
+      </nav>
+      <div class="mt-auto pt-6 border-t border-brand-border">
+        <div class="bg-brand-bg rounded-[20px] p-4 text-sm">
+          <div class="font-bold mb-1">보안 등급: 높음</div>
+          <div class="text-brand-gray mb-3 text-xs leading-relaxed">계정 정보는 암호화되어 안전하게 저장됩니다.</div>
+          <button class="w-full bg-white border border-brand-border rounded-full py-2 font-semibold hover:bg-gray-50 text-sm">보안 설정 확인</button>
+        </div>
+      </div>
+    </aside>
+    <main class="flex-1 overflow-y-auto pr-0 md:pr-2 pb-10 flex flex-col gap-5 md:gap-6">
+      <section class="mt-2 pl-1 md:pl-2 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+        <div>
+          <h1 class="text-[1.8rem] md:text-[2.25rem] font-bold tracking-tight mb-2">계정 보관함 🔐</h1>
+          <p class="text-brand-gray text-base md:text-[1.1rem]">사이트별 아이디와 비밀번호를 안전하게 저장하고 관리하세요.</p>
+        </div>
+        <button class="bg-brand-black text-white px-5 md:px-6 py-3 md:py-3.5 rounded-full text-sm font-bold hover:-translate-y-0.5 transition-all shadow-btn flex items-center gap-2 whitespace-nowrap">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
+          계정 추가
+        </button>
+      </section>
+
+      <div class="bg-white p-5 md:p-8 rounded-4xl panel flex flex-col gap-5 md:gap-6">
+        <!-- Search + filter -->
+        <div class="flex flex-col md:flex-row gap-4 items-stretch md:items-center">
+          <div class="relative flex-1">
+            <svg class="absolute left-5 top-1/2 -translate-y-1/2 text-brand-gray" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" placeholder="사이트명, ID 또는 담당자 검색" class="w-full bg-brand-bg rounded-2xl py-3.5 md:py-4 pl-14 pr-6 focus:ring-2 focus:ring-brand-black transition-all text-[15px] font-medium outline-none">
+          </div>
+          <div class="flex gap-2 overflow-x-auto pb-1 shrink-0">
+            <button class="px-4 py-2.5 rounded-xl bg-brand-black text-white text-sm font-semibold whitespace-nowrap">전체</button>
+            <button class="px-4 py-2.5 rounded-xl bg-brand-bg text-brand-gray hover:text-brand-black text-sm font-semibold whitespace-nowrap">쇼핑몰</button>
+            <button class="px-4 py-2.5 rounded-xl bg-brand-bg text-brand-gray hover:text-brand-black text-sm font-semibold whitespace-nowrap">결제/정산</button>
+            <button class="px-4 py-2.5 rounded-xl bg-brand-bg text-brand-gray hover:text-brand-black text-sm font-semibold whitespace-nowrap hidden md:block">광고/마케팅</button>
+            <button class="px-4 py-2.5 rounded-xl bg-brand-bg text-brand-gray hover:text-brand-black text-sm font-semibold whitespace-nowrap hidden md:block">SNS</button>
+          </div>
+        </div>
+
+        <!-- Security notice -->
+        <div class="flex items-start justify-between px-1 md:px-2">
+          <div class="flex items-center gap-3 md:gap-4 flex-wrap">
+            <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="w-4 h-4 rounded"><span class="text-sm font-bold text-brand-gray">전체 선택 (12개)</span></label>
+            <div class="h-3 w-px bg-brand-border"></div>
+            <button class="text-sm font-bold text-brand-gray hover:text-brand-black flex items-center gap-1">일괄 복사</button>
+            <button class="text-sm font-bold text-brand-pink hover:opacity-80 flex items-center gap-1">선택 삭제</button>
+          </div>
+          <div class="tooltip-wrap">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8E8E93" stroke-width="2" class="cursor-help"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            <div class="tooltip-box">권한이 있는 담당자만 열람할 수 있습니다.</div>
+          </div>
+        </div>
+
+        <!-- Account list -->
+        <div class="flex flex-col border-t border-brand-border">
+          <div class="flex items-center gap-3 md:gap-4 py-5 md:py-6 border-b border-brand-border hover:bg-brand-bg px-1 md:px-2 transition-colors">
+            <input type="checkbox" class="w-4 h-4 rounded border-brand-border shrink-0">
+            <div class="w-10 md:w-12 h-10 md:h-12 rounded-xl bg-brand-blue-light flex items-center justify-center shrink-0"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2196F3" stroke-width="2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 mb-0.5 flex-wrap"><span class="font-bold text-[0.95rem] md:text-[1rem]">스마트스토어 관리자</span><span class="text-[11px] px-1.5 py-0.5 rounded-md bg-brand-border text-brand-gray font-bold">쇼핑몰</span></div>
+              <div class="text-brand-gray text-sm">ID: shop_admin_01</div>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <div class="bg-brand-bg px-3 md:px-4 py-2 rounded-xl text-sm font-mono tracking-widest text-brand-gray hidden sm:block">••••••••</div>
+              <button class="p-2 hover:bg-white rounded-lg transition-colors" title="비밀번호 보기"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8E8E93" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+              <button class="p-2 hover:bg-white rounded-lg transition-colors" title="복사"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8E8E93" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></button>
+              <button class="px-3 py-2 text-xs font-bold text-brand-gray hover:text-brand-black hover:bg-white rounded-lg transition-all border border-transparent hover:border-brand-border hidden md:block">수정</button>
+            </div>
+          </div>
+          <div class="flex items-center gap-3 md:gap-4 py-5 md:py-6 border-b border-brand-border hover:bg-brand-bg px-1 md:px-2 transition-colors">
+            <input type="checkbox" class="w-4 h-4 rounded border-brand-border shrink-0">
+            <div class="w-10 md:w-12 h-10 md:h-12 rounded-xl bg-brand-orange-light flex items-center justify-center shrink-0"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FF9800" stroke-width="2"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg></div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 mb-0.5 flex-wrap"><span class="font-bold text-[0.95rem] md:text-[1rem]">카카오 비즈니스</span><span class="text-[11px] px-1.5 py-0.5 rounded-md bg-brand-border text-brand-gray font-bold">광고/마케팅</span></div>
+              <div class="text-brand-gray text-sm">ID: manager_kakao</div>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <div class="bg-brand-bg px-3 md:px-4 py-2 rounded-xl text-sm font-mono tracking-widest text-brand-gray hidden sm:block">••••••••</div>
+              <button class="p-2 hover:bg-white rounded-lg transition-colors"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8E8E93" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+              <button class="p-2 hover:bg-white rounded-lg transition-colors"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8E8E93" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></button>
+              <button class="px-3 py-2 text-xs font-bold text-brand-gray hover:text-brand-black hover:bg-white rounded-lg border border-transparent hover:border-brand-border hidden md:block">수정</button>
+            </div>
+          </div>
+          <div class="flex items-center gap-3 md:gap-4 py-5 md:py-6 border-b border-brand-border hover:bg-brand-bg px-1 md:px-2 transition-colors">
+            <input type="checkbox" class="w-4 h-4 rounded border-brand-border shrink-0">
+            <div class="w-10 md:w-12 h-10 md:h-12 rounded-xl bg-brand-pink-light flex items-center justify-center shrink-0"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E91E63" stroke-width="2"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 mb-0.5 flex-wrap"><span class="font-bold text-[0.95rem] md:text-[1rem]">인스타그램 공식계정</span><span class="text-[11px] px-1.5 py-0.5 rounded-md bg-brand-border text-brand-gray font-bold">SNS</span></div>
+              <div class="text-brand-gray text-sm">ID: brand_official_kr</div>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <div class="bg-brand-bg px-3 md:px-4 py-2 rounded-xl text-sm font-mono tracking-widest text-brand-gray hidden sm:block">••••••••</div>
+              <button class="p-2 hover:bg-white rounded-lg transition-colors"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8E8E93" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+              <button class="p-2 hover:bg-white rounded-lg transition-colors"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8E8E93" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></button>
+              <button class="px-3 py-2 text-xs font-bold text-brand-gray hover:text-brand-black hover:bg-white rounded-lg border border-transparent hover:border-brand-border hidden md:block">수정</button>
+            </div>
+          </div>
+        </div>
+        <div class="flex justify-center pt-2"><div class="flex items-center gap-1"><button class="w-8 h-8 rounded-lg flex items-center justify-center text-brand-gray hover:bg-brand-bg">1</button><button class="w-8 h-8 rounded-lg flex items-center justify-center bg-brand-black text-white font-bold">2</button><button class="w-8 h-8 rounded-lg flex items-center justify-center text-brand-gray hover:bg-brand-bg">3</button><button class="w-8 h-8 rounded-lg flex items-center justify-center text-brand-gray hover:bg-brand-bg"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></button></div></div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Mobile overlay -->
+<div id="sidebar-overlay" class="hidden fixed inset-0 bg-black/20 z-30" onclick="closeSidebar()"></div>
+
+<script>
+// ── Navigation ──────────────────────────────
+const PAGES = ['login','dashboard','todo','ledger','products','accounts'];
+const currentPage = { value: 'login' };
+
+function navigate(page) {
+  PAGES.forEach(p => {
+    const el = document.getElementById('page-' + p);
+    if (el) el.classList.remove('active');
+  });
+  const target = document.getElementById('page-' + page);
+  if (target) {
+    target.classList.add('active');
+    currentPage.value = page;
+  }
+  updateNavItems(page);
+  closeSidebar();
+  if (page === 'dashboard') animateBars();
+  if (page === 'ledger') animateDonut();
+}
+
+function updateNavItems(activePage) {
+  document.querySelectorAll('.nav-item').forEach(item => {
+    const p = item.dataset.page;
+    item.onclick = (e) => { e.preventDefault(); navigate(p); };
+    if (p === activePage) {
+      item.className = item.className.replace(/text-brand-gray|hover:text-brand-black|hover:bg-brand-bg/g,'');
+      item.classList.add('bg-brand-black','text-white','shadow-md');
+      item.classList.remove('text-brand-gray');
+    } else {
+      item.classList.remove('bg-brand-black','text-white','shadow-md');
+      item.classList.add('text-brand-gray','hover:text-brand-black','hover:bg-brand-bg');
+    }
+  });
+}
+
+// ── Login ────────────────────────────────────
+document.getElementById('login-btn').addEventListener('click', () => {
+  const id = document.getElementById('login-id').value.trim();
+  const pw = document.getElementById('login-pw').value.trim();
+  const err = document.getElementById('login-error');
+  if (!id || !pw) { err.classList.remove('hidden'); return; }
+  err.classList.add('hidden');
+  navigate('dashboard');
+});
+
+// remember checkbox
+document.getElementById('remember-box').addEventListener('click', function() {
+  const chk = document.getElementById('remember-check');
+  const isChecked = chk.classList.contains('hidden');
+  if (isChecked) {
+    chk.classList.remove('hidden');
+    this.classList.remove('border-[#E5E5EA]');
+    this.classList.add('bg-brand-black','border-brand-black');
+  } else {
+    chk.classList.add('hidden');
+    this.classList.remove('bg-brand-black','border-brand-black');
+    this.classList.add('border-[#E5E5EA]');
+  }
+});
+
+// password toggle
+document.getElementById('pw-toggle').addEventListener('click', function() {
+  const inp = document.getElementById('login-pw');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+});
+
+// ── Bar chart animation ──────────────────────
+function animateBars() {
+  const pills = document.querySelectorAll('#bar-chart .pill');
+  pills.forEach((pill, i) => {
+    const h = pill.dataset.h || 50;
+    pill.style.height = '0%';
+    setTimeout(() => { pill.style.height = h + '%'; }, 200 + i * 60);
+  });
+}
+
+// ── Donut animation ──────────────────────────
+function animateDonut() {
+  setTimeout(() => {
+    document.querySelectorAll('.donut-segment').forEach(seg => {
+      seg.style.strokeDasharray = seg.dataset.dash;
+    });
+  }, 150);
+}
+
+// ── Tab buttons (ledger) ─────────────────────
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    this.closest('.border-b').querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    this.classList.add('active');
+  });
+});
+
+// ── Todo interactions ────────────────────────
+function updateTodoCount() {
+  const rows = document.querySelectorAll('#todo-list .todo-row');
+  const cnt = document.getElementById('todo-count');
+  if (cnt) cnt.textContent = rows.length + '개';
+  if (rows.length === 0) {
+    document.getElementById('todo-list').classList.add('hidden');
+    document.getElementById('todo-empty').classList.remove('hidden');
+    document.getElementById('todo-empty').style.display = 'flex';
+  }
+}
+
+function confetti(x, y) {
+  const colors = ['#2196F3','#E91E63','#FF9800','#00C853','#1A1A1A'];
+  for (let i = 0; i < 14; i++) {
+    const el = document.createElement('div');
+    el.className = 'confetti-piece';
+    const tx = (Math.random() - 0.5) * 140;
+    const ty = -(Math.random() * 100 + 30);
+    el.style.cssText = `left:${x}px;top:${y}px;background:${colors[Math.floor(Math.random()*colors.length)]};--tx:${tx}px;--ty:${ty}px`;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 1100);
+  }
+}
+
+function completeTodo(el, e) {
+  const row = el.closest('.todo-row');
+  if (!row) return;
+  confetti(e.clientX, e.clientY);
+  row.classList.add('slide-out');
+  setTimeout(() => { row.remove(); updateTodoCount(); }, 320);
+}
+
+function deleteTodo(btn) {
+  const row = btn.closest('.todo-row');
+  if (!row) return;
+  row.classList.add('slide-out');
+  setTimeout(() => { row.remove(); updateTodoCount(); }, 320);
+}
+
+// Hover delete reveal
+document.addEventListener('mouseover', e => {
+  const row = e.target.closest('.todo-row');
+  if (row) row.querySelectorAll('.delete-btn').forEach(b => b.style.opacity = '1');
+});
+document.addEventListener('mouseout', e => {
+  const row = e.target.closest('.todo-row');
+  if (row && !row.contains(e.relatedTarget)) {
+    row.querySelectorAll('.delete-btn').forEach(b => b.style.opacity = '0');
+  }
+});
+
+function addTodo() {
+  const title = prompt('새 업무 제목을 입력하세요:');
+  if (!title || !title.trim()) return;
+  const list = document.getElementById('todo-list');
+  const row = document.createElement('div');
+  row.className = 'todo-row flex items-center justify-between p-4 md:p-5 border border-brand-border rounded-[24px] hover:bg-brand-bg transition-all group fade-in';
+  row.dataset.accent = 'blue';
+  row.innerHTML = `
+    <div class="flex items-center gap-4 md:gap-5 min-w-0">
+      <div class="w-6 md:w-7 h-6 md:h-7 rounded-full border-2 border-brand-blue-light flex items-center justify-center cursor-pointer bg-white group-hover:border-brand-blue transition-colors shrink-0" onclick="completeTodo(this, event)"></div>
+      <div class="min-w-0">
+        <div class="font-bold text-[1rem] md:text-[1.1rem] mb-1 group-hover:text-brand-blue transition-colors">${title.trim()}</div>
+        <div class="flex items-center gap-2 md:gap-3 flex-wrap">
+          <span class="bg-brand-border px-2.5 py-1 rounded-lg text-xs font-bold text-brand-black">신규</span>
+          <span class="text-brand-gray text-sm font-medium">기한 미설정</span>
+        </div>
+      </div>
+    </div>
+    <div class="flex items-center gap-2 md:gap-3 shrink-0 ml-3">
+      <button class="delete-btn px-3 py-2 text-brand-gray hover:text-brand-pink text-sm font-semibold transition-all" style="opacity:0" onclick="deleteTodo(this)">삭제</button>
+      <button class="px-4 md:px-5 py-2 md:py-2.5 bg-white border border-brand-border rounded-full text-sm font-bold hover:bg-brand-black hover:text-white transition-all shadow-sm whitespace-nowrap" onclick="completeTodo(this, event)">완료 처리</button>
+    </div>`;
+  list.classList.remove('hidden');
+  document.getElementById('todo-empty').classList.add('hidden');
+  list.appendChild(row);
+  updateTodoCount();
+}
+
+// ── Mobile sidebar ───────────────────────────
+function toggleSidebar() {
+  const sidebars = document.querySelectorAll('.sidebar');
+  const overlay = document.getElementById('sidebar-overlay');
+  const open = [...sidebars].some(s => s.classList.contains('open'));
+  if (open) { closeSidebar(); }
+  else {
+    sidebars.forEach(s => {
+      if (s.closest('#page-' + currentPage.value)) {
+        s.classList.add('open');
+        overlay.classList.remove('hidden');
+      }
+    });
+  }
+}
+function closeSidebar() {
+  document.querySelectorAll('.sidebar').forEach(s => s.classList.remove('open'));
+  document.getElementById('sidebar-overlay').classList.add('hidden');
+}
+
+// ── Init ─────────────────────────────────────
+updateNavItems('login');
+</script>
+</body>
+</html>
