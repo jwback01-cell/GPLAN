@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>GPLAN — 내부 운영의 모든 것, 한 곳에서</title>
 <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
@@ -349,12 +350,12 @@ tailwind.config = {
       <!-- Form -->
       <div class="flex flex-col gap-5">
         <div class="flex flex-col gap-2">
-          <label class="text-sm font-bold ml-1">아이디</label>
+          <label class="text-sm font-bold ml-1">이메일</label>
           <div class="relative">
             <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-brand-gray">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
             </div>
-            <input id="login-id" type="text" placeholder="아이디를 입력해주세요" class="w-full pl-11 pr-4 py-3.5 bg-brand-bg border border-brand-border rounded-2xl text-[15px] placeholder-brand-gray font-medium focus:outline-none focus:border-brand-blue focus:bg-white focus:ring-4 focus:ring-brand-blue-light/50 transition-all">
+            <input id="login-id" type="email" placeholder="이메일을 입력해주세요" class="w-full pl-11 pr-4 py-3.5 bg-brand-bg border border-brand-border rounded-2xl text-[15px] placeholder-brand-gray font-medium focus:outline-none focus:border-brand-blue focus:bg-white focus:ring-4 focus:ring-brand-blue-light/50 transition-all">
           </div>
         </div>
 
@@ -374,7 +375,11 @@ tailwind.config = {
         <!-- Error -->
         <div id="login-error" class="hidden bg-brand-pink-light/60 border border-brand-pink-light rounded-xl p-3.5 flex items-start gap-2.5 text-brand-pink fade-in">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="mt-0.5 shrink-0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          <span class="text-[0.9rem] font-semibold">아이디 또는 비밀번호를 확인해주세요.</span>
+          <span id="login-error-msg" class="text-[0.9rem] font-semibold">이메일 또는 비밀번호를 확인해주세요.</span>
+        </div>
+        <div id="login-success" class="hidden bg-brand-green-light border border-brand-green/20 rounded-xl p-3.5 flex items-start gap-2.5 text-brand-green fade-in">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="mt-0.5 shrink-0"><polyline points="20 6 9 17 4 12"/></svg>
+          <span id="login-success-msg" class="text-[0.9rem] font-semibold"></span>
         </div>
 
         <!-- Options -->
@@ -392,6 +397,9 @@ tailwind.config = {
         <button id="login-btn" class="w-full bg-brand-black text-white py-4 rounded-full text-[1.05rem] font-bold hover:bg-[#333] hover:-translate-y-0.5 transition-all shadow-btn flex items-center justify-center gap-2">
           로그인
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </button>
+        <button id="signup-btn" class="w-full py-3.5 rounded-full text-[0.95rem] font-semibold border border-brand-border text-brand-gray hover:bg-brand-bg hover:text-brand-black transition-all flex items-center justify-center gap-2">
+          회원가입
         </button>
       </div>
 
@@ -1262,85 +1270,35 @@ tailwind.config = {
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FF9800" stroke-width="2" class="shrink-0 mt-0.5"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
         <div><div class="font-bold text-sm text-brand-orange">재고가 안전재고 이하로 떨어진 상품이 있습니다.</div><div class="text-brand-orange/70 text-xs mt-0.5">빠른 발주를 권장합니다.</div></div>
       </div>
-      <!-- Table -->
-      <div class="bg-white rounded-4xl panel overflow-hidden flex flex-col flex-1">
+      <!-- Product List -->
+      <div class="bg-white rounded-4xl panel flex flex-col">
         <div class="p-4 md:p-6 border-b border-brand-border flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div class="relative w-full md:w-auto">
-            <input id="product-search" type="text" placeholder="상품명, SKU 검색..." class="pl-10 pr-4 py-2.5 bg-brand-bg rounded-full border border-transparent focus:bg-white focus:border-brand-border transition-all w-full md:w-[280px] text-sm outline-none" oninput="filterProducts()">
+            <input id="product-search" type="text" placeholder="상품명, SKU 검색..." class="pl-10 pr-4 py-2.5 bg-brand-bg rounded-full border border-transparent focus:bg-white focus:border-brand-border transition-all w-full md:w-[280px] text-sm outline-none" oninput="filterProducts(true)">
             <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 text-brand-gray" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           </div>
-          <select id="product-category-filter" class="px-4 py-2.5 bg-brand-bg rounded-full text-sm font-medium outline-none cursor-pointer w-full md:w-auto" onchange="filterProducts()">
+          <select id="product-category-filter" class="px-4 py-2.5 bg-brand-bg rounded-full text-sm font-medium outline-none cursor-pointer w-full md:w-auto" onchange="filterProducts(true)">
             <option>카테고리 전체</option><option>지플랜</option><option>서울리빙</option><option>서울리빙 그 외</option><option>서울리빙 의류</option><option>디지털</option><option>올바른</option>
           </select>
         </div>
-        <div class="overflow-x-auto flex-1">
-          <table class="w-full text-left border-collapse min-w-[640px]">
-            <thead class="sticky top-0 bg-white z-10 border-b border-brand-border">
-              <tr>
-                <th class="px-4 md:px-6 py-4 text-xs font-bold text-brand-gray uppercase tracking-wider">상품 정보</th>
-                <th class="px-4 md:px-6 py-4 text-xs font-bold text-brand-gray uppercase tracking-wider text-right">현재 재고</th>
-                <th class="px-4 md:px-6 py-4 text-xs font-bold text-brand-gray uppercase tracking-wider text-right">안전 재고</th>
-                <th class="px-4 md:px-6 py-4 text-xs font-bold text-brand-gray uppercase tracking-wider text-center hidden md:table-cell">자동 발주</th>
-                <th class="px-4 md:px-6 py-4 text-xs font-bold text-brand-gray uppercase tracking-wider text-center">상태</th>
-                <th class="px-4 md:px-6 py-4"></th>
-              </tr>
-            </thead>
-            <tbody id="product-tbody">
-              <tr class="hover:bg-brand-bg transition-colors border-b border-[#F9F9FB]">
-                <td class="px-4 md:px-6 py-4 md:py-5">
-                  <div class="flex items-center gap-3 md:gap-4">
-                    <div class="w-12 md:w-14 h-12 md:h-14 rounded-xl bg-brand-blue-light flex items-center justify-center text-brand-blue font-bold shrink-0">S1</div>
-                    <div><div class="font-bold text-sm md:text-[15px] mb-0.5">[24SS] 프리미엄 코튼 오버핏 티셔츠</div><div class="text-brand-gray text-xs font-medium">SKU: TS-24SS-WH-01 | 서울리빙 의류</div></div>
-                  </div>
-                </td>
-                <td class="px-4 md:px-6 py-4 md:py-5 text-right"><input type="number" value="142" class="input-stock"></td>
-                <td class="px-4 md:px-6 py-4 md:py-5 text-right"><input type="number" value="50" class="input-stock" style="border-style:dashed"></td>
-                <td class="px-4 md:px-6 py-4 md:py-5 text-center hidden md:table-cell"><div class="toggle-track on inline-flex" onclick="this.classList.toggle('on');this.classList.toggle('off')"><div class="toggle-thumb"></div></div></td>
-                <td class="px-4 md:px-6 py-4 md:py-5 text-center"><span class="px-2.5 md:px-3 py-1 rounded-full text-xs font-bold bg-brand-blue-light text-brand-blue">정상</span></td>
-                <td class="px-2 md:px-6 py-4 md:py-5 text-right"><button class="text-brand-gray hover:text-brand-black p-1 md:p-2"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg></button></td>
-              </tr>
-              <tr class="hover:bg-brand-bg transition-colors border-b border-[#F9F9FB]">
-                <td class="px-4 md:px-6 py-4 md:py-5">
-                  <div class="flex items-center gap-3 md:gap-4">
-                    <div class="w-12 md:w-14 h-12 md:h-14 rounded-xl bg-brand-pink-light flex items-center justify-center text-brand-pink font-bold shrink-0">P2</div>
-                    <div><div class="font-bold text-sm md:text-[15px] mb-0.5">데일리 캔버스 토트백 M 사이즈</div><div class="text-brand-gray text-xs font-medium">SKU: BG-CNV-BK-02 | 서울리빙</div></div>
-                  </div>
-                </td>
-                <td class="px-4 md:px-6 py-4 md:py-5 text-right"><input type="number" value="12" class="input-stock warn"></td>
-                <td class="px-4 md:px-6 py-4 md:py-5 text-right"><input type="number" value="30" class="input-stock" style="border-style:dashed"></td>
-                <td class="px-4 md:px-6 py-4 md:py-5 text-center hidden md:table-cell"><div class="toggle-track on inline-flex" onclick="this.classList.toggle('on');this.classList.toggle('off')"><div class="toggle-thumb"></div></div></td>
-                <td class="px-4 md:px-6 py-4 md:py-5 text-center"><span class="px-2.5 md:px-3 py-1 rounded-full text-xs font-bold bg-brand-pink-light text-brand-pink">부족</span></td>
-                <td class="px-2 md:px-6 py-4 md:py-5 text-right"><button class="text-brand-gray hover:text-brand-black p-1 md:p-2"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg></button></td>
-              </tr>
-              <tr class="hover:bg-brand-bg transition-colors border-b border-[#F9F9FB]">
-                <td class="px-4 md:px-6 py-4 md:py-5">
-                  <div class="flex items-center gap-3 md:gap-4">
-                    <div class="w-12 md:w-14 h-12 md:h-14 rounded-xl bg-brand-border flex items-center justify-center text-brand-gray font-bold shrink-0">H3</div>
-                    <div><div class="font-bold text-sm md:text-[15px] mb-0.5">어반 레더 벨트 다크 브라운</div><div class="text-brand-gray text-xs font-medium">SKU: BT-LTH-DB-01 | 지플랜</div></div>
-                  </div>
-                </td>
-                <td class="px-4 md:px-6 py-4 md:py-5 text-right"><input type="number" value="88" class="input-stock"></td>
-                <td class="px-4 md:px-6 py-4 md:py-5 text-right"><input type="number" value="20" class="input-stock" style="border-style:dashed"></td>
-                <td class="px-4 md:px-6 py-4 md:py-5 text-center hidden md:table-cell"><div class="toggle-track off inline-flex" onclick="this.classList.toggle('on');this.classList.toggle('off')"><div class="toggle-thumb"></div></div></td>
-                <td class="px-4 md:px-6 py-4 md:py-5 text-center"><span class="px-2.5 md:px-3 py-1 rounded-full text-xs font-bold bg-brand-border text-brand-gray">정상</span></td>
-                <td class="px-2 md:px-6 py-4 md:py-5 text-right"><button class="text-brand-gray hover:text-brand-black p-1 md:p-2"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg></button></td>
-              </tr>
-            </tbody>
-          </table>
-          <!-- 검색 결과 없음 -->
-          <div id="product-no-result" class="hidden flex flex-col items-center justify-center py-16 gap-3 text-center">
-            <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#C7C7CC" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <p class="font-bold text-brand-gray">검색 결과가 없습니다</p>
-            <p id="product-no-result-msg" class="text-sm text-brand-gray"></p>
-          </div>
+        <!-- 헤더 -->
+        <div class="grid border-b border-brand-border bg-white px-4 md:px-6 py-3 select-none" style="grid-template-columns: 1fr 100px 100px 100px 80px 40px;">
+          <div class="text-xs font-bold text-brand-gray uppercase tracking-wider cursor-pointer hover:text-brand-black transition-colors flex items-center gap-1" onclick="sortProducts('name')">상품 정보<span id="sort-icon-name" class="text-[10px]"></span></div>
+          <div class="text-xs font-bold text-brand-gray uppercase tracking-wider text-right cursor-pointer hover:text-brand-black transition-colors flex items-center justify-end gap-1" onclick="sortProducts('stock')">현재 재고<span id="sort-icon-stock" class="text-[10px]"></span></div>
+          <div class="text-xs font-bold text-brand-gray uppercase tracking-wider text-right cursor-pointer hover:text-brand-black transition-colors flex items-center justify-end gap-1" onclick="sortProducts('safety')">안전 재고<span id="sort-icon-safety" class="text-[10px]"></span></div>
+          <div class="text-xs font-bold text-brand-gray uppercase tracking-wider text-center hidden md:block">자동 발주</div>
+          <div class="text-xs font-bold text-brand-gray uppercase tracking-wider text-center cursor-pointer hover:text-brand-black transition-colors flex items-center justify-center gap-1" onclick="sortProducts('status')">상태<span id="sort-icon-status" class="text-[10px]"></span></div>
+          <div></div>
         </div>
-        <div class="p-4 border-t border-brand-border flex justify-center gap-2">
-          <button class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-brand-border"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg></button>
-          <button class="w-8 h-8 rounded-lg flex items-center justify-center bg-brand-black text-white font-bold text-sm">1</button>
-          <button class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-brand-border font-bold text-sm text-brand-gray">2</button>
-          <button class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-brand-border font-bold text-sm text-brand-gray">3</button>
-          <button class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-brand-border"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></button>
+        <!-- 상품 행 -->
+        <div id="product-list-body"></div>
+        <!-- 검색 결과 없음 -->
+        <div id="product-no-result" class="hidden flex flex-col items-center justify-center py-16 gap-3 text-center">
+          <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#C7C7CC" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <p class="font-bold text-brand-gray">검색 결과가 없습니다</p>
+          <p id="product-no-result-msg" class="text-sm text-brand-gray"></p>
         </div>
+        <div id="product-pagination" class="p-4 border-t border-brand-border flex justify-center gap-2"></div>
       </div>
     </main>
   </div>
@@ -1801,6 +1759,11 @@ tailwind.config = {
 <div id="sidebar-overlay" class="hidden fixed inset-0 bg-black/20 z-30" onclick="closeSidebar()"></div>
 
 <script>
+// ── Supabase ────────────────────────────────
+const SUPABASE_URL = 'https://gdsutxmceghvkemcfyuw.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdkc3V0eG1jZWdodmtlbWNmeXV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5ODc0MDEsImV4cCI6MjA5MTU2MzQwMX0.yO_UwxtQVtVBLC2dVsmJQ4_qgOuWl5LBVAbsnmlwq1U';
+const _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
 // ── Navigation ──────────────────────────────
 const PAGES = ['login','dashboard','todo','ledger','products','accounts'];
 const currentPage = { value: 'login' };
@@ -1819,7 +1782,7 @@ function navigate(page) {
   closeSidebar();
   if (page === 'dashboard') animateBars();
   if (page === 'ledger') animateDonut();
-  if (page === 'products') updateProductStats();
+  if (page === 'products') loadProductsFromDB();
 }
 
 function updateNavItems(activePage) {
@@ -1837,22 +1800,84 @@ function updateNavItems(activePage) {
   });
 }
 
-// ── Login ────────────────────────────────────
-document.getElementById('login-btn').addEventListener('click', () => {
-  const id = document.getElementById('login-id').value.trim();
-  const pw = document.getElementById('login-pw').value.trim();
+// ── Login (Supabase Auth) ────────────────────
+function showLoginError(msg) {
   const err = document.getElementById('login-error');
-  if (!id || !pw) { err.classList.remove('hidden'); return; }
+  const suc = document.getElementById('login-success');
+  document.getElementById('login-error-msg').textContent = msg;
+  err.classList.remove('hidden');
+  suc.classList.add('hidden');
+}
+
+function showLoginSuccess(msg) {
+  const err = document.getElementById('login-error');
+  const suc = document.getElementById('login-success');
+  document.getElementById('login-success-msg').textContent = msg;
+  suc.classList.remove('hidden');
   err.classList.add('hidden');
-  const remembered = !document.getElementById('remember-check').classList.contains('hidden');
-  if (remembered) {
-    localStorage.setItem('gplan_login_state', '1');
-    localStorage.setItem('gplan_login_id', id);
-  } else {
-    localStorage.removeItem('gplan_login_state');
-    localStorage.removeItem('gplan_login_id');
-  }
+}
+
+function hideLoginMessages() {
+  document.getElementById('login-error').classList.add('hidden');
+  document.getElementById('login-success').classList.add('hidden');
+}
+
+async function handleLoginAfterAuth() {
+  await loadTodosFromDB();
+  await loadProductsFromDB();
   navigate('dashboard');
+}
+
+document.getElementById('login-btn').addEventListener('click', async () => {
+  const email = document.getElementById('login-id').value.trim();
+  const pw    = document.getElementById('login-pw').value.trim();
+  hideLoginMessages();
+  if (!email || !pw) { showLoginError('이메일과 비밀번호를 입력해주세요.'); return; }
+
+  const loginBtn = document.getElementById('login-btn');
+  loginBtn.disabled = true;
+  loginBtn.innerHTML = '<span class="animate-pulse">로그인 중...</span>';
+
+  const { error } = await _supabase.auth.signInWithPassword({ email, password: pw });
+
+  if (error) {
+    loginBtn.disabled = false;
+    loginBtn.innerHTML = '로그인 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>';
+    if (error.message.includes('Invalid login')) {
+      showLoginError('이메일 또는 비밀번호가 올바르지 않습니다.');
+    } else {
+      showLoginError(error.message);
+    }
+    return;
+  }
+
+  loginBtn.disabled = false;
+  loginBtn.innerHTML = '로그인 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>';
+  await handleLoginAfterAuth();
+});
+
+document.getElementById('signup-btn').addEventListener('click', async () => {
+  const email = document.getElementById('login-id').value.trim();
+  const pw    = document.getElementById('login-pw').value.trim();
+  hideLoginMessages();
+  if (!email || !pw) { showLoginError('이메일과 비밀번호를 입력해주세요.'); return; }
+  if (pw.length < 6) { showLoginError('비밀번호는 6자 이상이어야 합니다.'); return; }
+
+  const btn = document.getElementById('signup-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="animate-pulse">가입 중...</span>';
+
+  const { error } = await _supabase.auth.signUp({ email, password: pw });
+
+  btn.disabled = false;
+  btn.innerHTML = '회원가입';
+
+  if (error) {
+    showLoginError(error.message);
+    return;
+  }
+
+  showLoginSuccess('회원가입 완료! 로그인 버튼을 눌러주세요.');
 });
 
 // remember checkbox
@@ -2113,13 +2138,13 @@ function _generateRepeatTodos(base, startDate) {
   const items = [];
   if (_todoRepeat === 'none') {
     const dk = _makeDateKey(startDate);
-    items.push({ ...base, id: _tid++, dueText: _makeDueText(startDate), dateKey: dk, completed: false });
+    items.push({ ...base, id: 0, dueText: _makeDueText(startDate), dateKey: dk, completed: false });
 
   } else if (_todoRepeat === 'daily') {
     for (let i = 0; i < 30; i++) {
       const d = new Date(startDate); d.setDate(d.getDate() + i);
       const dk = _makeDateKey(d);
-      items.push({ ...base, id: _tid++, dueText: _makeDueText(d), dateKey: dk, completed: false,
+      items.push({ ...base, id: 0, dueText: _makeDueText(d), dateKey: dk, completed: false,
                    repeatLabel: '매일 반복' });
     }
 
@@ -2138,7 +2163,7 @@ function _generateRepeatTodos(base, startDate) {
         let offset = (dow - base2.getDay() + 7) % 7;
         base2.setDate(base2.getDate() + offset + week * 7);
         const dk = _makeDateKey(base2);
-        items.push({ ...base, id: _tid++, dueText: _makeDueText(base2), dateKey: dk, completed: false, repeatLabel });
+        items.push({ ...base, id: 0, dueText: _makeDueText(base2), dateKey: dk, completed: false, repeatLabel });
       });
     }
 
@@ -2149,13 +2174,13 @@ function _generateRepeatTodos(base, startDate) {
       const d = new Date(startDate.getFullYear(), startDate.getMonth() + m, day);
       if (d.getDate() !== day) continue; // 해당 월에 날짜 없으면 건너뜀 (예: 2월 31일)
       const dk = _makeDateKey(d);
-      items.push({ ...base, id: _tid++, dueText: _makeDueText(d), dateKey: dk, completed: false, repeatLabel });
+      items.push({ ...base, id: 0, dueText: _makeDueText(d), dateKey: dk, completed: false, repeatLabel });
     }
   }
   return items;
 }
 
-function submitTodoModal() {
+async function submitTodoModal() {
   const title = document.getElementById('todo-title').value.trim();
   const team  = document.getElementById('todo-team').value.trim();
   const due   = document.getElementById('todo-due').value;
@@ -2173,14 +2198,14 @@ function submitTodoModal() {
   const base = { title, team: team || '미지정', accent: todoPriority, memo };
 
   if (_editingTodoId !== null) {
-    // 수정 모드: 단건 수정
+    // 수정 모드
     const item = todos.find(t => t.id === _editingTodoId);
     if (item) {
       const mo = startDate.getMonth() + 1, dd = startDate.getDate();
-      item.title      = title;
-      item.team       = team || '미지정';
-      item.accent     = todoPriority;
-      item.memo       = memo;
+      item.title  = title;
+      item.team   = team || '미지정';
+      item.accent = todoPriority;
+      item.memo   = memo;
       if (due) {
         item.dateKey = _makeDateKey(startDate);
         if (endDate) {
@@ -2192,18 +2217,24 @@ function submitTodoModal() {
           item.dueText = `${mo}/${dd} 마감`;
         }
       }
+      await updateTodoDB(item.id, item);
     }
   } else if (_todoRepeat === 'none' && endDate) {
-    // 기간 업무 (범위)
+    // 기간 업무
     const sM = startDate.getMonth()+1, sD = startDate.getDate();
     const eM = endDate.getMonth()+1,   eD = endDate.getDate();
-    todos.push({ ...base, id: _tid++, completed: false,
+    const newItem = { ...base, completed: false,
       dateKey: _makeDateKey(startDate), endDateKey: _makeDateKey(endDate),
-      dueText: `${sM}/${sD} ~ ${eM}/${eD}` });
+      dueText: `${sM}/${sD} ~ ${eM}/${eD}` };
+    const dbRow = await insertTodoDB(newItem);
+    if (dbRow) { newItem.id = dbRow.id; todos.push(newItem); }
   } else {
     // 단건 or 반복
     const newItems = _generateRepeatTodos(base, startDate);
-    newItems.forEach(it => todos.push(it));
+    for (const it of newItems) {
+      const dbRow = await insertTodoDB(it);
+      if (dbRow) { it.id = dbRow.id; todos.push(it); }
+    }
   }
 
   renderTodoList();
@@ -2230,10 +2261,160 @@ function setStatFilter(type) {
     }
   });
 
-  filterProducts();
+  filterProducts(true);
 }
 
 // ── Product Stats ─────────────────────────────
+let _allProducts = []; // DB에서 로드한 전체 상품 캐시
+
+async function loadProductsFromDB() {
+  try {
+    const { data: { session } } = await _supabase.auth.getSession();
+    if (!session) return;
+    const user = session.user;
+
+    let { data, error } = await _supabase.from('products').select('*').eq('user_id', user.id).order('created_at');
+    if (error) console.error('products load error:', error);
+
+    if (!data || data.length === 0) {
+      const defaults = [
+        { user_id: user.id, name: '[24SS] 프리미엄 코튼 오버핏 티셔츠', sku: 'TS-24SS-WH-01', category: '서울리빙 의류', stock: 142, safety_stock: 50, auto_order: true },
+        { user_id: user.id, name: '데일리 캔버스 토트백 M 사이즈', sku: 'BG-CNV-BK-02', category: '서울리빙', stock: 12, safety_stock: 30, auto_order: true },
+        { user_id: user.id, name: '어반 레더 벨트 다크 브라운', sku: 'BT-LTH-DB-01', category: '지플랜', stock: 88, safety_stock: 20, auto_order: false },
+      ];
+      await _supabase.from('products').insert(defaults);
+      const res = await _supabase.from('products').select('*').eq('user_id', user.id).order('created_at');
+      data = res.data || [];
+    }
+
+    _allProducts = data || [];
+    renderProductsPage();
+  } catch (e) {
+    console.error('loadProductsFromDB 오류:', e);
+  }
+}
+
+function renderProductsPage() {
+  const listBody = document.getElementById('product-list-body');
+  if (!listBody) return;
+
+  const query  = (document.getElementById('product-search')?.value || '').trim().toLowerCase();
+  const catSel = document.getElementById('product-category-filter')?.value || '카테고리 전체';
+  const catAll = catSel === '카테고리 전체';
+
+  // 필터링
+  const filtered = _allProducts.filter(p => {
+    const name = (p.name || '').toLowerCase();
+    const sku  = (p.sku  || '').toLowerCase();
+    const cat  = p.category || '';
+    const isLow  = p.safety_stock > 0 && p.stock < p.safety_stock;
+    const isAuto = !!p.auto_order;
+
+    const matchQuery = !query || name.includes(query) || sku.includes(query);
+    const matchCat   = catAll || cat === catSel;
+    const matchStat  = activeStatFilter === 'all'
+                    || (activeStatFilter === 'low'  && isLow)
+                    || (activeStatFilter === 'auto' && isAuto);
+    return matchQuery && matchCat && matchStat;
+  });
+
+  // 정렬
+  if (_productSortKey) {
+    filtered.sort(function(a, b) {
+      var va, vb;
+      if (_productSortKey === 'name') {
+        va = (a.name || '').toLowerCase();
+        vb = (b.name || '').toLowerCase();
+        return _productSortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+      } else if (_productSortKey === 'stock') {
+        va = a.stock || 0; vb = b.stock || 0;
+      } else if (_productSortKey === 'safety') {
+        va = a.safety_stock || 0; vb = b.safety_stock || 0;
+      } else if (_productSortKey === 'status') {
+        // 부족(1)을 먼저, 정상(0)을 나중에
+        va = (a.safety_stock > 0 && a.stock < a.safety_stock) ? 1 : 0;
+        vb = (b.safety_stock > 0 && b.stock < b.safety_stock) ? 1 : 0;
+      }
+      if (_productSortKey !== 'name') {
+        return _productSortDir === 'asc' ? va - vb : vb - va;
+      }
+      return 0;
+    });
+  }
+
+  // 통계
+  let total = _allProducts.length, low = 0, autoC = 0;
+  _allProducts.forEach(p => {
+    if (p.safety_stock > 0 && p.stock < p.safety_stock) low++;
+    if (p.auto_order) autoC++;
+  });
+  document.getElementById('stat-total').textContent = total + '개';
+  document.getElementById('stat-low').textContent   = low   + '개';
+  document.getElementById('stat-auto').textContent  = autoC + '개';
+
+  // 페이지네이션
+  const totalPages = Math.max(1, Math.ceil(filtered.length / _productsPerPage));
+  if (_productPage > totalPages) _productPage = totalPages;
+  const startIdx = (_productPage - 1) * _productsPerPage;
+  const pageItems = filtered.slice(startIdx, startIdx + _productsPerPage);
+
+  const colorPairs = [
+    ['bg-brand-blue-light','text-brand-blue'], ['bg-brand-pink-light','text-brand-pink'],
+    ['bg-brand-orange-light','text-[#FF9800]'], ['bg-brand-green-light','text-[#00C853]'],
+    ['bg-brand-border','text-brand-gray']
+  ];
+
+  if (pageItems.length === 0) {
+    listBody.innerHTML = '';
+    const noResult = document.getElementById('product-no-result');
+    const noMsg    = document.getElementById('product-no-result-msg');
+    if (noResult) {
+      noMsg.textContent = query ? '"' + query + '"에 대한 상품을 찾을 수 없습니다.' : '등록된 상품이 없습니다.';
+      noResult.classList.remove('hidden');
+    }
+    renderProductPagination(1);
+    return;
+  }
+
+  const noResult = document.getElementById('product-no-result');
+  if (noResult) noResult.classList.add('hidden');
+
+  listBody.innerHTML = pageItems.map(function(p, i) {
+    var ci = (startIdx + i) % colorPairs.length;
+    var bg = colorPairs[ci][0], fg = colorPairs[ci][1];
+    var initials = p.name.replace(/[\[\]]/g,'').trim().slice(0,2).toUpperCase();
+    var isLow = p.safety_stock > 0 && p.stock < p.safety_stock;
+    var statusHtml = isLow
+      ? '<span class="px-2.5 md:px-3 py-1 rounded-full text-xs font-bold bg-brand-pink-light text-brand-pink">부족</span>'
+      : '<span class="px-2.5 md:px-3 py-1 rounded-full text-xs font-bold bg-brand-blue-light text-brand-blue">정상</span>';
+    var stockClass = isLow ? 'input-stock warn' : 'input-stock';
+    return '<div class="grid items-center px-4 md:px-6 py-4 md:py-5 border-b border-[#F9F9FB] hover:bg-brand-bg transition-colors" data-db-id="' + p.id + '" style="grid-template-columns: 1fr 100px 100px 100px 80px 40px;">' +
+      '<div class="flex items-center gap-3 md:gap-4">' +
+        '<div class="w-12 md:w-14 h-12 md:h-14 rounded-xl ' + bg + ' ' + fg + ' flex items-center justify-center font-bold shrink-0">' + escHtml(initials) + '</div>' +
+        '<div><div class="font-bold text-sm mb-0.5">' + escHtml(p.name) + '</div>' +
+        '<div class="text-brand-gray text-xs font-medium">SKU: ' + escHtml(p.sku||'') + ' | ' + escHtml(p.category||'') + '</div></div>' +
+      '</div>' +
+      '<div class="text-right"><input type="number" value="' + p.stock + '" class="' + stockClass + '"></div>' +
+      '<div class="text-right"><input type="number" value="' + p.safety_stock + '" class="input-stock" style="border-style:dashed"></div>' +
+      '<div class="text-center hidden md:block"><div class="toggle-track ' + (p.auto_order?'on':'off') + ' inline-flex" onclick="this.classList.toggle(\'on\');this.classList.toggle(\'off\')"><div class="toggle-thumb"></div></div></div>' +
+      '<div class="text-center">' + statusHtml + '</div>' +
+      '<div class="text-right relative">' +
+        '<button onclick="toggleProductMenu(' + p.id + ', event)" class="text-brand-gray hover:text-brand-black p-1 md:p-2">' +
+          '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>' +
+        '</button>' +
+        '<div id="product-menu-' + p.id + '" class="hidden absolute right-0 top-full mt-1 bg-white rounded-xl shadow-lg border border-brand-border py-1 z-50 w-28">' +
+          '<button onclick="openEditProduct(' + p.id + ')" class="w-full text-left px-4 py-2.5 text-sm font-medium hover:bg-brand-bg transition-colors flex items-center gap-2">' +
+            '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>수정</button>' +
+          '<button onclick="deleteProduct(' + p.id + ')" class="w-full text-left px-4 py-2.5 text-sm font-medium text-brand-pink hover:bg-brand-pink-light/30 transition-colors flex items-center gap-2">' +
+            '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>삭제</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+
+  renderProductPagination(totalPages);
+}
+
 function updateProductStats() {
   const rows  = document.querySelectorAll('#product-tbody tr');
   let total = 0, low = 0, auto = 0;
@@ -2258,60 +2439,67 @@ function updateProductStats() {
   document.getElementById('stat-auto').textContent  = auto.toLocaleString()  + '개';
 }
 
-// ── Product Search & Filter ──────────────────
-function filterProducts() {
-  const query  = document.getElementById('product-search').value.trim().toLowerCase();
-  const catSel = document.getElementById('product-category-filter').value;
-  const catAll = catSel === '카테고리 전체';
+// ── Product Search, Filter & Pagination ──────
+let _productPage = 1;
+const _productsPerPage = 10;
+let _productSortKey = null;  // 'name' | 'stock' | 'safety' | 'status'
+let _productSortDir = 'asc'; // 'asc' | 'desc'
 
-  const rows    = document.querySelectorAll('#product-tbody tr');
-  let visible   = 0;
+function sortProducts(key) {
+  if (_productSortKey === key) {
+    _productSortDir = _productSortDir === 'asc' ? 'desc' : 'asc';
+  } else {
+    _productSortKey = key;
+    _productSortDir = 'asc';
+  }
+  _productPage = 1;
+  renderProductsPage();
 
-  rows.forEach(row => {
-    const nameEl = row.querySelector('td:first-child .font-bold');
-    const metaEl = row.querySelector('td:first-child .text-brand-gray');
-    const name   = nameEl ? nameEl.textContent.toLowerCase() : '';
-    const meta   = metaEl ? metaEl.textContent : '';  // "SKU: xxx | 카테고리"
-
-    const skuMatch = meta.match(/SKU:\s*([^\|]+)/);
-    const catMatch = meta.match(/\|\s*(.+)$/);
-    const sku = skuMatch ? skuMatch[1].trim().toLowerCase() : '';
-    const cat = catMatch ? catMatch[1].trim() : '';
-
-    const stockInput  = row.querySelectorAll('td')[1]?.querySelector('input');
-    const safetyInput = row.querySelectorAll('td')[2]?.querySelector('input');
-    const toggleEl    = row.querySelectorAll('td')[3]?.querySelector('.toggle-track');
-    const stock  = stockInput  ? parseInt(stockInput.value)  || 0 : 0;
-    const safety = safetyInput ? parseInt(safetyInput.value) || 0 : 0;
-    const isAuto = toggleEl ? toggleEl.classList.contains('on') : false;
-    const isLow  = safety > 0 && stock < safety;
-
-    const matchQuery = !query || name.includes(query) || sku.includes(query);
-    const matchCat   = catAll  || cat === catSel;
-    const matchStat  = activeStatFilter === 'all'
-                    || (activeStatFilter === 'low'  && isLow)
-                    || (activeStatFilter === 'auto' && isAuto);
-
-    if (matchQuery && matchCat && matchStat) {
-      row.style.display = '';
-      visible++;
+  // 아이콘 업데이트
+  ['name','stock','safety','status'].forEach(function(k) {
+    var icon = document.getElementById('sort-icon-' + k);
+    if (!icon) return;
+    if (k === _productSortKey) {
+      icon.textContent = _productSortDir === 'asc' ? '▲' : '▼';
     } else {
-      row.style.display = 'none';
+      icon.textContent = '';
     }
   });
+}
 
-  const noResult = document.getElementById('product-no-result');
-  const noMsg    = document.getElementById('product-no-result-msg');
-  if (visible === 0) {
-    let msg = '';
-    if (query && !catAll) msg = `"${query}" · ${catSel}`;
-    else if (query)        msg = `"${query}"에 대한 상품을 찾을 수 없습니다.`;
-    else                   msg = `${catSel} 카테고리에 등록된 상품이 없습니다.`;
-    noMsg.textContent = msg;
-    noResult.classList.remove('hidden');
-  } else {
-    noResult.classList.add('hidden');
+function filterProducts(resetPage) {
+  if (resetPage) _productPage = 1;
+  renderProductsPage();
+}
+
+function renderProductPagination(totalPages) {
+  const container = document.getElementById('product-pagination');
+  if (!container) return;
+  if (totalPages <= 1) { container.innerHTML = ''; return; }
+
+  const prevDisabled = _productPage <= 1;
+  const nextDisabled = _productPage >= totalPages;
+
+  let html = `<button onclick="goProductPage(${_productPage - 1})" class="w-8 h-8 rounded-lg flex items-center justify-center ${prevDisabled ? 'opacity-30 cursor-default' : 'hover:bg-brand-border'}" ${prevDisabled ? 'disabled' : ''}>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg></button>`;
+
+  for (let p = 1; p <= totalPages; p++) {
+    if (p === _productPage) {
+      html += `<button class="w-8 h-8 rounded-lg flex items-center justify-center bg-brand-black text-white font-bold text-sm">${p}</button>`;
+    } else {
+      html += `<button onclick="goProductPage(${p})" class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-brand-border font-bold text-sm text-brand-gray">${p}</button>`;
+    }
   }
+
+  html += `<button onclick="goProductPage(${_productPage + 1})" class="w-8 h-8 rounded-lg flex items-center justify-center ${nextDisabled ? 'opacity-30 cursor-default' : 'hover:bg-brand-border'}" ${nextDisabled ? 'disabled' : ''}>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></button>`;
+
+  container.innerHTML = html;
+}
+
+function goProductPage(page) {
+  _productPage = page;
+  filterProducts();
 }
 
 // ── Import Excel Modal ───────────────────────
@@ -2443,48 +2631,28 @@ function showImportPreview(filename, rows) {
   });
 }
 
-function confirmImport() {
+async function confirmImport() {
   if (!importedRows.length) return;
-  const colorPairs = [
-    ['bg-brand-blue-light','text-brand-blue'],
-    ['bg-brand-pink-light','text-brand-pink'],
-    ['bg-brand-orange-light','text-[#FF9800]'],
-    ['bg-brand-green-light','text-[#00C853]'],
-    ['bg-brand-border','text-brand-gray'],
-  ];
-  const tbody = document.getElementById('product-tbody');
-  [...importedRows].reverse().forEach(r => {
-    const [bg, fg] = colorPairs[Math.floor(Math.random() * colorPairs.length)];
-    const initials  = r.name.replace(/[\[\]]/g,'').trim().slice(0,2).toUpperCase();
-    const isLow     = r.stock < r.safety && r.safety > 0;
-    const statusHtml = isLow
-      ? `<span class="px-2.5 md:px-3 py-1 rounded-full text-xs font-bold bg-brand-pink-light text-brand-pink">부족</span>`
-      : `<span class="px-2.5 md:px-3 py-1 rounded-full text-xs font-bold bg-brand-blue-light text-brand-blue">정상</span>`;
-    const row = document.createElement('tr');
-    row.className = 'hover:bg-brand-bg transition-colors border-b border-[#F9F9FB] fade-in';
-    row.innerHTML = `
-      <td class="px-4 md:px-6 py-4 md:py-5">
-        <div class="flex items-center gap-3 md:gap-4">
-          <div class="w-12 md:w-14 h-12 md:h-14 rounded-xl ${bg} ${fg} flex items-center justify-center font-bold shrink-0">${escHtml(initials)}</div>
-          <div>
-            <div class="font-bold text-sm md:text-[15px] mb-0.5">${escHtml(r.name)}</div>
-            <div class="text-brand-gray text-xs font-medium">SKU: ${escHtml(r.sku)} | ${escHtml(r.cat || '미분류')}</div>
-          </div>
-        </div>
-      </td>
-      <td class="px-4 md:px-6 py-4 md:py-5 text-right"><input type="number" value="${r.stock}" class="${isLow ? 'input-stock warn' : 'input-stock'}"></td>
-      <td class="px-4 md:px-6 py-4 md:py-5 text-right"><input type="number" value="${r.safety}" class="input-stock" style="border-style:dashed"></td>
-      <td class="px-4 md:px-6 py-4 md:py-5 text-center hidden md:table-cell">
-        <div class="toggle-track ${r.auto ? 'on' : 'off'} inline-flex" onclick="this.classList.toggle('on');this.classList.toggle('off')"><div class="toggle-thumb"></div></div>
-      </td>
-      <td class="px-4 md:px-6 py-4 md:py-5 text-center">${statusHtml}</td>
-      <td class="px-2 md:px-6 py-4 md:py-5 text-right">
-        <button class="text-brand-gray hover:text-brand-black p-1 md:p-2"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg></button>
-      </td>`;
-    tbody.prepend(row);
-  });
+
+  // DB에 저장
+  const { data: { session } } = await _supabase.auth.getSession();
+  if (session) {
+    const rows = importedRows.map(r => ({
+      user_id: session.user.id,
+      name: r.name,
+      sku: r.sku,
+      category: r.cat || '미분류',
+      stock: r.stock || 0,
+      safety_stock: r.safety || 0,
+      auto_order: !!r.auto
+    }));
+    const { error } = await _supabase.from('products').insert(rows);
+    if (error) console.error('import insert error:', error);
+  }
+
   closeImportModal();
-  updateProductStats();
+  // DB에서 다시 로드하여 화면 갱신
+  await loadProductsFromDB();
 }
 
 // 드롭존 이벤트 (DOMContentLoaded 이후 등록)
@@ -2754,10 +2922,70 @@ function escHtml(str) {
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-function openAddProductDrawer() {
+// ── Product Menu / Edit / Delete ─────────────
+let _openProductMenuId = null;
+
+function toggleProductMenu(id, e) {
+  e.stopPropagation();
+  // 기존 열린 메뉴 닫기
+  if (_openProductMenuId !== null && _openProductMenuId !== id) {
+    var prev = document.getElementById('product-menu-' + _openProductMenuId);
+    if (prev) prev.classList.add('hidden');
+  }
+  var menu = document.getElementById('product-menu-' + id);
+  if (!menu) return;
+  var isHidden = menu.classList.contains('hidden');
+  menu.classList.toggle('hidden');
+  _openProductMenuId = isHidden ? id : null;
+}
+
+// 아무 곳 클릭하면 메뉴 닫기
+document.addEventListener('click', function() {
+  if (_openProductMenuId !== null) {
+    var m = document.getElementById('product-menu-' + _openProductMenuId);
+    if (m) m.classList.add('hidden');
+    _openProductMenuId = null;
+  }
+});
+
+let _editingProductId = null;
+
+function openEditProduct(id) {
+  var p = _allProducts.find(function(x) { return x.id === id; });
+  if (!p) return;
+  _editingProductId = id;
+  _openProductMenuId = null;
+
+  document.getElementById('new-product-name').value = p.name;
+  document.getElementById('new-product-sku').value = p.sku || '';
+  document.getElementById('new-product-category').value = p.category || '지플랜';
+  document.getElementById('new-product-stock').value = p.stock;
+  document.getElementById('new-product-safety').value = p.safety_stock;
+  var toggle = document.getElementById('new-product-toggle');
+  toggle.classList.remove('on','off');
+  toggle.classList.add(p.auto_order ? 'on' : 'off');
+  document.getElementById('drawer-error').classList.add('hidden');
+
+  // 모달 제목/버튼 변경
+  var titleEl = document.querySelector('#add-product-drawer .text-xl');
+  if (titleEl) titleEl.textContent = '상품 수정';
+  var submitBtn = document.querySelector('#add-product-drawer [onclick="submitAddProduct()"]');
+  if (submitBtn) submitBtn.textContent = '수정 완료';
+
   document.getElementById('add-product-backdrop').classList.add('open');
   document.getElementById('add-product-drawer').classList.add('open');
   document.body.style.overflow = 'hidden';
+}
+
+async function deleteProduct(id) {
+  _openProductMenuId = null;
+  if (!confirm('이 상품을 삭제하시겠습니까?')) return;
+  await _supabase.from('products').delete().eq('id', id);
+  await loadProductsFromDB();
+}
+
+function openAddProductDrawer() {
+  _editingProductId = null;
   document.getElementById('new-product-name').value = '';
   document.getElementById('new-product-sku').value = '';
   document.getElementById('new-product-category').value = '지플랜';
@@ -2766,6 +2994,14 @@ function openAddProductDrawer() {
   const toggle = document.getElementById('new-product-toggle');
   toggle.classList.remove('on'); toggle.classList.add('off');
   document.getElementById('drawer-error').classList.add('hidden');
+  // 제목/버튼 초기화
+  var titleEl = document.querySelector('#add-product-drawer .text-xl');
+  if (titleEl) titleEl.textContent = '상품 추가 📦';
+  var submitBtn = document.querySelector('#add-product-drawer [onclick="submitAddProduct()"]');
+  if (submitBtn) submitBtn.textContent = '상품 추가';
+  document.getElementById('add-product-backdrop').classList.add('open');
+  document.getElementById('add-product-drawer').classList.add('open');
+  document.body.style.overflow = 'hidden';
   setTimeout(() => document.getElementById('new-product-name').focus(), 350);
 }
 
@@ -2775,7 +3011,7 @@ function closeAddProductDrawer() {
   document.body.style.overflow = '';
 }
 
-function submitAddProduct() {
+async function submitAddProduct() {
   const name     = document.getElementById('new-product-name').value.trim();
   const sku      = document.getElementById('new-product-sku').value.trim();
   const cat      = document.getElementById('new-product-category').value;
@@ -2798,48 +3034,25 @@ function submitAddProduct() {
     return;
   }
 
-  const colorPairs = [
-    ['bg-brand-blue-light','text-brand-blue'],
-    ['bg-brand-pink-light','text-brand-pink'],
-    ['bg-brand-orange-light','text-[#FF9800]'],
-    ['bg-brand-green-light','text-[#00C853]'],
-    ['bg-brand-border','text-brand-gray']
-  ];
-  const [bg, fg] = colorPairs[Math.floor(Math.random() * colorPairs.length)];
-  const initials = name.replace(/[\[\]]/g,'').trim().slice(0,2).toUpperCase();
-  const isLow = stock < safety && safety > 0;
-  const statusHtml = isLow
-    ? `<span class="px-2.5 md:px-3 py-1 rounded-full text-xs font-bold bg-brand-pink-light text-brand-pink">부족</span>`
-    : `<span class="px-2.5 md:px-3 py-1 rounded-full text-xs font-bold bg-brand-blue-light text-brand-blue">정상</span>`;
-  const stockClass = isLow ? 'input-stock warn' : 'input-stock';
+  // DB 저장 또는 수정
+  const { data: { session } } = await _supabase.auth.getSession();
+  if (session) {
+    if (_editingProductId) {
+      await _supabase.from('products').update({
+        name, sku, category: cat, stock, safety_stock: safety, auto_order: autoOrder
+      }).eq('id', _editingProductId);
+    } else {
+      await _supabase.from('products').insert({
+        user_id: session.user.id, name, sku, category: cat,
+        stock, safety_stock: safety, auto_order: autoOrder
+      });
+    }
+  }
 
-  const row = document.createElement('tr');
-  row.className = 'hover:bg-brand-bg transition-colors border-b border-[#F9F9FB] fade-in';
-  row.innerHTML = `
-    <td class="px-4 md:px-6 py-4 md:py-5">
-      <div class="flex items-center gap-3 md:gap-4">
-        <div class="w-12 md:w-14 h-12 md:h-14 rounded-xl ${bg} ${fg} flex items-center justify-center font-bold shrink-0">${escHtml(initials)}</div>
-        <div>
-          <div class="font-bold text-sm md:text-[15px] mb-0.5">${escHtml(name)}</div>
-          <div class="text-brand-gray text-xs font-medium">SKU: ${escHtml(sku)} | ${escHtml(cat)}</div>
-        </div>
-      </div>
-    </td>
-    <td class="px-4 md:px-6 py-4 md:py-5 text-right"><input type="number" value="${stock}" class="${stockClass}"></td>
-    <td class="px-4 md:px-6 py-4 md:py-5 text-right"><input type="number" value="${safety}" class="input-stock" style="border-style:dashed"></td>
-    <td class="px-4 md:px-6 py-4 md:py-5 text-center hidden md:table-cell">
-      <div class="toggle-track ${autoOrder ? 'on' : 'off'} inline-flex" onclick="this.classList.toggle('on');this.classList.toggle('off')"><div class="toggle-thumb"></div></div>
-    </td>
-    <td class="px-4 md:px-6 py-4 md:py-5 text-center">${statusHtml}</td>
-    <td class="px-2 md:px-6 py-4 md:py-5 text-right">
-      <button class="text-brand-gray hover:text-brand-black p-1 md:p-2">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
-      </button>
-    </td>`;
-  document.getElementById('product-tbody').prepend(row);
   closeAddProductDrawer();
-  updateProductStats();
+  await loadProductsFromDB();
 }
+
 
 // ── Mobile sidebar ───────────────────────────
 function toggleSidebar() {
@@ -2934,15 +3147,66 @@ function exportProductsExcel() {
 const _fmtKey = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 const _tday   = new Date();
 const _tmrw   = new Date(_tday); _tmrw.setDate(_tday.getDate() + 1);
-let   _tid    = 6;
+let   _tid    = 1;
 
-const todos = [
-  { id:1, title:'봄 시즌 신상품 상세페이지 업로드', team:'디자인팀',   dueText:'오늘 18:00 마감', accent:'blue',   completed:false, dateKey:_fmtKey(_tday) },
-  { id:2, title:'A/S 불량 건 환불 승인 프로세스',   team:'CS팀',       dueText:'기한 지남',       accent:'pink',   completed:false, dateKey:_fmtKey(_tday) },
-  { id:3, title:'주간 매출 정산 내역서 작성',        team:'경영지원팀', dueText:'내일 14:00 마감', accent:'blue',   completed:false, dateKey:_fmtKey(_tmrw) },
-  { id:4, title:'창고 재고 수량 실사 리포트 제출',   team:'물류팀',     dueText:'오늘 23:59 마감', accent:'orange', completed:false, dateKey:_fmtKey(_tday) },
-  { id:5, title:'겨울 재고 창고 이동 기획안',        team:'',           dueText:'',                accent:'blue',   completed:true,  completedAt:'09:30', dateKey:_fmtKey(_tday) },
-];
+const todos = []; // DB에서 로드
+
+// ── Supabase Todos CRUD ─────────────────────
+function _dbRowToTodo(r) {
+  return {
+    id: r.id, title: r.title, team: r.team, dueText: r.due_text, accent: r.accent,
+    completed: r.completed, completedAt: r.completed_at, dateKey: r.date_key,
+    endDateKey: r.end_date_key, memo: r.memo, repeatLabel: r.repeat_label
+  };
+}
+
+function _todoToDbRow(t) {
+  return {
+    title: t.title, team: t.team, due_text: t.dueText, accent: t.accent,
+    completed: t.completed || false, completed_at: t.completedAt || null,
+    date_key: t.dateKey, end_date_key: t.endDateKey || null,
+    memo: t.memo || null, repeat_label: t.repeatLabel || null
+  };
+}
+
+async function loadTodosFromDB() {
+  const { data: { user } } = await _supabase.auth.getUser();
+  if (!user) return;
+  const { data, error } = await _supabase.from('todos').select('*').eq('user_id', user.id).order('created_at', { ascending: true });
+  if (error) { console.error('todos load error:', error); return; }
+  todos.length = 0;
+  (data || []).forEach(r => todos.push(_dbRowToTodo(r)));
+  _tid = todos.length > 0 ? Math.max(...todos.map(t => t.id)) + 1 : 1;
+  renderTodoList();
+  renderDashboardTodos();
+}
+
+async function insertTodoDB(item) {
+  const { data: { user } } = await _supabase.auth.getUser();
+  if (!user) return null;
+  const row = { user_id: user.id, ..._todoToDbRow(item) };
+  const { data, error } = await _supabase.from('todos').insert(row).select().single();
+  if (error) { console.error('todo insert error:', error); return null; }
+  return data;
+}
+
+async function updateTodoDB(id, fields) {
+  const dbFields = {};
+  if ('title' in fields)       dbFields.title        = fields.title;
+  if ('team' in fields)        dbFields.team         = fields.team;
+  if ('dueText' in fields)     dbFields.due_text     = fields.dueText;
+  if ('accent' in fields)      dbFields.accent       = fields.accent;
+  if ('completed' in fields)   dbFields.completed    = fields.completed;
+  if ('completedAt' in fields) dbFields.completed_at = fields.completedAt;
+  if ('dateKey' in fields)     dbFields.date_key     = fields.dateKey;
+  if ('endDateKey' in fields)  dbFields.end_date_key = fields.endDateKey;
+  if ('memo' in fields)        dbFields.memo         = fields.memo;
+  await _supabase.from('todos').update(dbFields).eq('id', id);
+}
+
+async function deleteTodoDB(id) {
+  await _supabase.from('todos').delete().eq('id', id);
+}
 
 const TODO_ACCENT = {
   blue:   { border:'border-brand-blue-light',   cHov:'group-hover:border-brand-blue',   tHov:'group-hover:text-brand-blue',   dBadge:'bg-brand-blue-light px-2 py-0.5 rounded text-xs font-bold text-brand-blue',   tBadge:'bg-brand-blue-light px-2.5 py-1 rounded-lg text-xs font-bold text-brand-blue',   tDue:'text-brand-gray text-sm font-medium' },
@@ -3067,6 +3331,7 @@ function todoComplete(id, e) {
   const now = new Date();
   item.completed   = true;
   item.completedAt = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+  updateTodoDB(id, { completed: true, completedAt: item.completedAt });
   const row = document.querySelector('#todo-list [data-id="' + id + '"]');
   if (row) {
     row.classList.add('slide-out');
@@ -3080,12 +3345,14 @@ function todoUncomplete(id) {
   const item = todos.find(t => t.id === id);
   if (!item || !item.completed) return;
   item.completed = false; item.completedAt = '';
+  updateTodoDB(id, { completed: false, completedAt: '' });
   renderTodoList(); renderDashboardTodos();
 }
 
 function todoDelete(id) {
   const idx = todos.findIndex(t => t.id === id);
   if (idx === -1) return;
+  deleteTodoDB(id);
   const row = document.querySelector('#todo-list [data-id="' + id + '"]');
   if (row) {
     row.classList.add('slide-out');
@@ -3095,7 +3362,9 @@ function todoDelete(id) {
   }
 }
 
-function clearAllCompleted() {
+async function clearAllCompleted() {
+  const completedIds = todos.filter(t => t.completed).map(t => t.id);
+  for (const cid of completedIds) await deleteTodoDB(cid);
   for (let i = todos.length - 1; i >= 0; i--) {
     if (todos[i].completed) todos.splice(i, 1);
   }
@@ -3566,9 +3835,9 @@ function renderAnalysisTab(m, idxs) {
 }
 
 // ── Logout ───────────────────────────────────
-function logout() {
-  localStorage.removeItem('gplan_login_state');
-  localStorage.removeItem('gplan_login_id');
+async function logout() {
+  await _supabase.auth.signOut();
+  todos.length = 0;
   navigate('login');
 }
 
@@ -3578,12 +3847,13 @@ updateProductStats();
 renderTodoList();
 renderDashboardTodos();
 
-// 자동 로그인
-if (localStorage.getItem('gplan_login_state') === '1') {
-  const savedId = localStorage.getItem('gplan_login_id') || '';
-  if (savedId) document.getElementById('login-id').value = savedId;
-  navigate('dashboard');
-}
+// 자동 로그인 (Supabase 세션 확인)
+(async function checkSession() {
+  const { data: { session } } = await _supabase.auth.getSession();
+  if (session) {
+    await handleLoginAfterAuth();
+  }
+})();
 
 // ── Todo Calendar ─────────────────────────────
 let calYear  = new Date().getFullYear();
