@@ -4712,14 +4712,10 @@ function applyDetailRange(tab) {
     .filter(m => m.s <= endDate && m.e >= startDate)
     .map(m => m.idx);
 
-  if (idxs.length === 0) {
-    const lblEl = document.getElementById(tab + '-period-label');
-    if (lblEl) lblEl.textContent = '해당 기간 데이터 없음';
-    toggleRangePicker(tab);
-    return;
-  }
+  // 선택한 실제 날짜 범위 (entries-based 탭은 이 범위로 정확히 필터)
+  const range = { start: startVal, end: endVal };
 
-  // 레이블: "M월 D일 ~ M월 D일" (같은 연도면 연도 생략)
+  // 레이블: "YYYY년 M월 D일 ~ M월 D일"
   const fmtKo = d => `${d.getMonth()+1}월 ${d.getDate()}일`;
   const label = `${startDate.getFullYear()}년 ${fmtKo(startDate)} ~ ${fmtKo(endDate)}`;
 
@@ -4736,11 +4732,11 @@ function applyDetailRange(tab) {
   // 피커 닫기
   toggleRangePicker(tab);
 
-  // 해당 기간 데이터로 렌더링
-  if (tab === 'product')       renderProductTab(0, idxs);
-  else if (tab === 'supplier') renderSupplierTab(0, idxs);
-  else if (tab === 'channel')  renderChannelTab(0, idxs);
-  else if (tab === 'analysis') renderAnalysisTab(0, idxs);
+  // 선택한 실제 날짜 범위로 렌더링 (데이터 없으면 빈 표 표시)
+  if (tab === 'product')       renderProductTab(0, range);
+  else if (tab === 'supplier') renderSupplierTab(0, range);
+  else if (tab === 'channel')  renderChannelTab(0, range);
+  else if (tab === 'analysis') renderAnalysisTab(0, idxs);   // 분석 탭은 월 단위(샘플)
 }
 
 // 장부 입력 데이터를 월(m)로 필터 (0=전체, 1=1월, ...)
@@ -4753,9 +4749,24 @@ function _filterEntriesByMonth(m) {
     return month === m;
   });
 }
+// 직접 선택한 날짜 범위(YYYY-MM-DD ~ YYYY-MM-DD)로 필터
+function _ymdNorm(s) {
+  const p = String(s || '').split('-');
+  if (p.length < 3) return '';
+  return p[0] + '-' + String(p[1]).padStart(2, '0') + '-' + String(p[2]).padStart(2, '0');
+}
+function _filterEntriesByRange(startVal, endVal) {
+  if (!_ledgerEntries || !_ledgerEntries.length) return [];
+  if (!startVal || !endVal) return _ledgerEntries;
+  const s = _ymdNorm(startVal), e = _ymdNorm(endVal);
+  return _ledgerEntries.filter(r => {
+    const d = _ymdNorm(r['날짜']);
+    return d && d >= s && d <= e;   // 정규화 후 사전식 비교
+  });
+}
 
-function _getProductRowsFromEntries(m) {
-  const entries = _filterEntriesByMonth(m);
+function _getProductRowsFromEntries(m, range) {
+  const entries = range ? _filterEntriesByRange(range.start, range.end) : _filterEntriesByMonth(m);
   if (!entries || !entries.length) return null;
   const map = {};
   entries.forEach(r => {
@@ -4774,8 +4785,8 @@ function _getProductRowsFromEntries(m) {
   })).sort((a, b) => b.sales - a.sales);
 }
 
-function _getSupplierRowsFromEntries(m) {
-  const entries = _filterEntriesByMonth(m);
+function _getSupplierRowsFromEntries(m, range) {
+  const entries = range ? _filterEntriesByRange(range.start, range.end) : _filterEntriesByMonth(m);
   if (!entries || !entries.length) return null;
   const map = {};
   entries.forEach(r => {
@@ -4788,8 +4799,8 @@ function _getSupplierRowsFromEntries(m) {
   return Object.values(map).sort((a, b) => b.amount - a.amount);
 }
 
-function _getChannelRowsFromEntries(m) {
-  const entries = _filterEntriesByMonth(m);
+function _getChannelRowsFromEntries(m, range) {
+  const entries = range ? _filterEntriesByRange(range.start, range.end) : _filterEntriesByMonth(m);
   if (!entries || !entries.length) return null;
   const map = {};
   entries.forEach(r => {
@@ -4808,8 +4819,8 @@ function _getChannelRowsFromEntries(m) {
   })).sort((a, b) => b.sales - a.sales);
 }
 
-function renderProductTab(m, idxs) {
-  const entryRows = _getProductRowsFromEntries(m);
+function renderProductTab(m, range) {
+  const entryRows = _getProductRowsFromEntries(m, range);
   const rows = entryRows || [];
   const totalSales = rows.reduce((s,r) => s + r.sales, 0);
   const totalProfit = rows.reduce((s,r) => s + r.profit, 0);
@@ -4838,9 +4849,9 @@ function renderProductTab(m, idxs) {
     </tr>`).join('');
 }
 
-function renderSupplierTab(m, idxs) {
-  const entryRows = _getSupplierRowsFromEntries(m);
-  const rows = entryRows || (idxs ? _supplierData(idxs) : _getSupplierRows(m));
+function renderSupplierTab(m, range) {
+  const entryRows = _getSupplierRowsFromEntries(m, range);
+  const rows = entryRows || (range ? [] : _getSupplierRows(m));
   const totalAmount = rows.reduce((s,r) => s + r.amount, 0);
   const top = rows[0];
 
@@ -4868,9 +4879,9 @@ function renderSupplierTab(m, idxs) {
   }).join('');
 }
 
-function renderChannelTab(m, idxs) {
-  const entryRows = _getChannelRowsFromEntries(m);
-  const rows = entryRows || (idxs ? _channelData(idxs) : _getChannelRows(m));
+function renderChannelTab(m, range) {
+  const entryRows = _getChannelRowsFromEntries(m, range);
+  const rows = entryRows || (range ? [] : _getChannelRows(m));
   const totalSales = rows.reduce((s,r) => s + r.sales, 0);
   const totalFee = rows.reduce((s,r) => s + r.fee, 0);
   const avgFeeRate = totalSales > 0 ? (totalFee / totalSales * 100).toFixed(1) : '0.0';
